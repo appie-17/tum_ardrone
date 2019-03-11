@@ -43,8 +43,6 @@
   <build_depend>libqt4-dev</build_depend>
   <build_depend>atlas</build_depend>
   <build_depend>liblapack-dev</build_depend>
-  <build_depend>ardrone_autonomy</build_depend>
-  <build_depend>parrot_drone</build_depend>
   <build_depend>cv_bridge</build_depend>
   <build_depend>dynamic_reconfigure</build_depend>
   <build_depend>geometry_msgs</build_depend>
@@ -57,8 +55,6 @@
   <run_depend>libqt4-dev</run_depend>
   <run_depend>atlas</run_depend>
   <run_depend>liblapack-dev</run_depend>
-  <run_depend>ardrone_autonomy</run_depend>
-  <run_depend>parrot_drone</run_depend>
   <run_depend>cv_bridge</run_depend>
   <run_depend>dynamic_reconfigure</run_depend>
   <run_depend>geometry_msgs</run_depend>

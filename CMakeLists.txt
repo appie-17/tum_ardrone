@@ -8,7 +8,6 @@ project(tum_ardrone)
 ## Find catkin macros and libraries
 find_package(catkin REQUIRED COMPONENTS
   tf
-  parrot_drone
   cv_bridge
   dynamic_reconfigure
   geometry_msgs
@@ -64,7 +63,7 @@ generate_messages(DEPENDENCIES std_msgs)
 ###################################
 ## catkin specific configuration ##
 ###################################
-catkin_package(CATKIN_DEPENDS message_runtime std_msgs parrot_drone)
+catkin_package(CATKIN_DEPENDS message_runtime std_msgs)
 
 ###########
 ## Build ##
