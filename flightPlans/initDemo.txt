@@ -1,4 +1,4 @@
-autoInit 500 800 4000 0.5
+autoInit 1000 1500 1500 0.05
 
 setReference $POSE$
 setInitialReachDist 0.2
@@ -16,6 +16,8 @@ goto -0.5 0.5 0 0
 goto 0.5 0.5 0 0
 goto 0.5 -0.5 0 0
 goto 0 0 0 0
+
+
 
 
 

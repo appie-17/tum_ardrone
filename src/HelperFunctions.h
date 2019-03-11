@@ -92,6 +92,34 @@ inline static void rod2rpy(TooN::SO3<> trans, double* roll, double* pitch, doubl
 	while(*roll < -180) *roll += 360;
 	while(*yaw > 180) *yaw -= 360;
 	while(*yaw < -180) *yaw += 360;
+
+}
+
+inline static void q2rpy(TooN::Vector<4> q, double* X, double* Y, double* Z)
+{
+	double t0, t1, t2, t3, t4;
+	double x = q[0];
+	double y = q[1];
+	double z = q[2];
+	double w = q[3];
+	
+	t0 = 2.0 * (w*x - y*z);
+	t1 = 1.0 - 2.0*(x*x + y*y);
+	*X = atan2(t0,t1);
+	
+	t2 = 2.0 * (w*y - z*x);
+	if (t2 > 1.0)	t2 = 1.0;
+	if (t2 < -1.0)	t2 = -1.0;
+	*Y = asin(t2);
+	
+	t3 = 2.0 * (w*z +x*y);
+	t4 = 1.0 - 2.0*(y*y + z*z);
+	*Z = atan2(t3, t4);
+	
+	
+	*X *= 180/3.14159265;
+	*Y *= 180/3.14159265;
+	*Z *= 180/3.14159265;
 }
 
 
@@ -115,3 +143,4 @@ inline static int getMS(ros::Time stamp = ros::Time::now())
 }
 
 #endif /* __HELPERFUNCTIONS_H */
+

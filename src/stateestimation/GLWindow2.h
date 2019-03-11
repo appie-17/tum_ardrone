@@ -11,6 +11,10 @@
 #include <cvd/glwindow.h>
 #include <TooN/TooN.h>
 #include "MouseKeyHandler.h"
+#include <stdlib.h>
+#include <gvars3/GStringUtil.h>
+#include <gvars3/instances.h>
+#include <TooN/helpers.h>
 
 class GLWindowMenu;
 

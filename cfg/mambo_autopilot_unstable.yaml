@@ -1,0 +1,45 @@
+!!python/object/new:dynamic_reconfigure.encoding.Config
+dictitems:
+  Kd_gaz: 0.1
+  Kd_rp: 0.4
+  Kd_yaw: 0.0
+  Ki_gaz: 0.001
+  Ki_rp: 0.0
+  Ki_yaw: 0.0
+  Kp_gaz: 0.5
+  Kp_rp: 0.5
+  Kp_yaw: 0.01
+  agressiveness: 1.0
+  groups: !!python/object/new:dynamic_reconfigure.encoding.Config
+    dictitems:
+      Kd_gaz: 0.1
+      Kd_rp: 0.4
+      Kd_yaw: 0.0
+      Ki_gaz: 0.001
+      Ki_rp: 0.0
+      Ki_yaw: 0.0
+      Kp_gaz: 0.5
+      Kp_rp: 0.5
+      Kp_yaw: 0.01
+      agressiveness: 1.0
+      groups: !!python/object/new:dynamic_reconfigure.encoding.Config
+        state: []
+      id: 0
+      max_gaz_drop: -0.8
+      max_gaz_rise: 0.8
+      max_rp: 1.0
+      max_yaw: 0.1
+      name: Default
+      parameters: !!python/object/new:dynamic_reconfigure.encoding.Config
+        state: []
+      parent: 0
+      rise_fac: 1.0
+      state: true
+      type: ''
+    state: []
+  max_gaz_drop: -0.8
+  max_gaz_rise: 0.8
+  max_rp: 1.0
+  max_yaw: 0.1
+  rise_fac: 1.0
+state: []

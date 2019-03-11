@@ -24,7 +24,7 @@
  
 
 #include "../DroneController.h"
-#include "tum_ardrone/filter_state.h"
+#include "tum_ardrone/ptam_state.h"
 
 class ControlNode;
 class DroneController;
@@ -49,7 +49,7 @@ public:
 	// is called with control-frequency, is supposed to each time generate and send a new
 	// control command to the drone.
 	// returns wether the goal of this KI has been reached (leads to the KI being destroyed and the next one being popped).
-	virtual bool update(const tum_ardrone::filter_stateConstPtr statePtr) = 0;
+	virtual bool update(const nav_msgs::OdometryConstPtr statePtr) = 0;
 
 	// constructed shortly before first update.
 	inline KIProcedure(void) {node = NULL; controller = NULL; command = "not set"; };

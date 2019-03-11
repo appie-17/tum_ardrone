@@ -21,7 +21,7 @@
 #include "KIAutoInit.h"
 #include "../DroneController.h"
 #include "../ControlNode.h"
-#include "../../HelperFunctions.h"
+
 
 
 KIAutoInit::KIAutoInit(bool resetMap, int imoveTimeMS, int iwaitTimeMS, int reachHeightMS, float controlMult, bool takeoff)
@@ -54,8 +54,14 @@ KIAutoInit::~KIAutoInit(void)
 }
 
 
-bool KIAutoInit::update(const tum_ardrone::filter_stateConstPtr statePtr)
+bool KIAutoInit::update(const nav_msgs::OdometryConstPtr statePtr)
 {
+	double state_roll, state_pitch, state_yaw;
+	q2rpy(TooN::makeVector(statePtr->pose.pose.orientation.x,
+						   statePtr->pose.pose.orientation.y,
+						   statePtr->pose.pose.orientation.z,
+						   statePtr->pose.pose.orientation.w), &state_roll, &state_pitch, &state_yaw);
+
 	// no PTAM initialization, just takeoff.
 	if(!resetMap)
 	{
@@ -76,7 +82,7 @@ bool KIAutoInit::update(const tum_ardrone::filter_stateConstPtr statePtr)
 			}
 
 			controller->setTarget(DronePosition(
-					TooN::makeVector(statePtr->x,statePtr->y,statePtr->z),statePtr->yaw));
+					TooN::makeVector(statePtr->pose.pose.position.x,statePtr->pose.pose.position.y,statePtr->pose.pose.position.z),state_yaw));
 			node->sendControlToDrone(controller->update(statePtr));
 			stage = DONE;
 			return true;
@@ -135,7 +141,7 @@ bool KIAutoInit::update(const tum_ardrone::filter_stateConstPtr statePtr)
 			}
 			else	// time is up, take second KF
 			{
-				if(statePtr->ptamState == statePtr->PTAM_INITIALIZING)	// TODO: ptam status enum, this should be PTAM_INITIALIZING
+				if(controller->state_PTAM == 1)	// TODO: ptam status enum, this should be PTAM_INITIALIZING
 				{
 					node->publishCommand("p space");
 					stageStarted = getMS();
@@ -155,10 +161,10 @@ bool KIAutoInit::update(const tum_ardrone::filter_stateConstPtr statePtr)
 		case WAIT_FOR_SECOND:
 
 			// am i done?
-			if(statePtr->ptamState == statePtr->PTAM_BEST || statePtr->ptamState == statePtr->PTAM_GOOD || statePtr->ptamState == statePtr->PTAM_TOOKKF) // TODO: PTAM_GOOD or PTAM_BEST or PTAM_TOOKKF
+			if(controller->state_PTAM == 4 || controller->state_PTAM == 3 || controller->state_PTAM == 5) // TODO: PTAM_GOOD or PTAM_BEST or PTAM_TOOKKF
 			{
 				controller->setTarget(DronePosition(
-									TooN::makeVector(statePtr->x,statePtr->y,statePtr->z),statePtr->yaw));
+									TooN::makeVector(statePtr->pose.pose.position.x,statePtr->pose.pose.position.y,statePtr->pose.pose.position.z),state_yaw));
 				node->sendControlToDrone(controller->update(statePtr));
 				stage = DONE;
 				return true;

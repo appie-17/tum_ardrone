@@ -55,8 +55,14 @@ KIFlyTo::~KIFlyTo(void)
 }
 
 
-bool KIFlyTo::update(const tum_ardrone::filter_stateConstPtr statePtr)
+bool KIFlyTo::update(const nav_msgs::OdometryConstPtr statePtr)
 {
+	double state_roll, state_pitch, state_yaw;
+	q2rpy(TooN::makeVector(statePtr->pose.pose.orientation.x,
+						   statePtr->pose.pose.orientation.y,
+						   statePtr->pose.pose.orientation.z,
+						   statePtr->pose.pose.orientation.w), &state_roll, &state_pitch, &state_yaw);
+
 	if(!targetSet)
 		controller->setTarget(checkpoint);
 	targetSet = true;
@@ -76,11 +82,11 @@ bool KIFlyTo::update(const tum_ardrone::filter_stateConstPtr statePtr)
 
 	// get target dist:
 	TooN::Vector<3> diffs = TooN::makeVector(
-			statePtr->x - checkpoint.pos[0],
-			statePtr->y - checkpoint.pos[1],
-			statePtr->z - checkpoint.pos[2]);
+			statePtr->pose.pose.position.x - checkpoint.pos[0],
+			statePtr->pose.pose.position.y - checkpoint.pos[1],
+			statePtr->pose.pose.position.z - checkpoint.pos[2]);
 
-	double diffYaw = statePtr->yaw - checkpoint.yaw;
+	double diffYaw = state_yaw - checkpoint.yaw;
 	double diffDistSquared = diffs[0] * diffs[0] + diffs[1] * diffs[1] + diffs[2] * diffs[2];
 
 	// if not reached yet, need to get within small radius to count.

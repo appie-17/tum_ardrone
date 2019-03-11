@@ -619,3 +619,4 @@ bool MapView::handleCommand(std::string s)
 	}
 	return true;
 }
+

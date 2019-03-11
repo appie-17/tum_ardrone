@@ -23,7 +23,8 @@
 
 #include "ros/ros.h"
 #include "geometry_msgs/Twist.h"
-#include "tum_ardrone/filter_state.h"
+#include "tum_ardrone/drone_state.h"
+#include "tum_ardrone/ptam_state.h"
 #include "std_msgs/String.h"
 #include <dynamic_reconfigure/server.h>
 #include "tum_ardrone/AutopilotParamsConfig.h"
@@ -47,10 +48,12 @@ class KIProcedure;
 struct ControlNode
 {
 private:
+	ros::Subscriber dronestate_sub;
 	ros::Subscriber dronepose_sub;
+	ros::Subscriber ptamstate_sub;
 	ros::Publisher vel_pub;
-	ros::Subscriber tum_ardrone_sub;
-	ros::Publisher tum_ardrone_pub;
+	ros::Subscriber drone_sub;
+	ros::Publisher drone_pub;
 	ros::Publisher takeoff_pub;
 	ros::Publisher land_pub;
 	ros::Publisher toggleState_pub;
@@ -61,7 +64,9 @@ private:
 	// parameters
 	int minPublishFreq;
 	std::string control_channel;
+	std::string dronestate_channel;	
 	std::string dronepose_channel;
+	std::string ptamstate_channel;
 	std::string command_channel;
 	std::string packagePath;
 	std::string land_channel;
@@ -110,9 +115,9 @@ private:
 	void startControl();
 	void stopControl();
 	void clearCommands();
-	void updateControl(const tum_ardrone::filter_stateConstPtr statePtr);
+	void updateControl(const nav_msgs::OdometryConstPtr statePtr);
 
-	void popNextCommand(const tum_ardrone::filter_stateConstPtr statePtr);
+	void popNextCommand(const nav_msgs::OdometryConstPtr statePtr);
 	void reSendInfo();
 	char buf[500];
 	ControlCommand lastSentControl;
@@ -122,7 +127,8 @@ public:
 
 
 	// ROS message callbacks
-	void droneposeCb(const tum_ardrone::filter_stateConstPtr statePtr);
+	void ptamstateCb(const tum_ardrone::ptam_stateConstPtr statePtr);
+	void droneposeCb(const nav_msgs::OdometryConstPtr statePtr);
 	void comCb(const std_msgs::StringConstPtr str);
 	void dynConfCb(tum_ardrone::AutopilotParamsConfig &config, uint32_t level);
 

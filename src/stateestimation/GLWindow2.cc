@@ -4,10 +4,7 @@
 #include "PTAM/OpenGL.h"
 #include "GLWindow2.h"
 #include "GLWindowMenu.h"
-#include <stdlib.h>
-#include <gvars3/GStringUtil.h>
-#include <gvars3/instances.h>
-#include <TooN/helpers.h>
+
 
 using namespace CVD;
 using namespace std;

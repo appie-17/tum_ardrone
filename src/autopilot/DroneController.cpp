@@ -17,9 +17,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with tum_ardrone.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
- 
- 
+
 #include "DroneController.h"
 #include "gvars3/instances.h"
 #include "../HelperFunctions.h"
@@ -50,14 +48,20 @@ double angleFromTo2(double angle, double min, double sup)
 }
 
 // generates and sends a new control command to the drone, 
-// based on the currently active command ant the drone's position.
-ControlCommand DroneController::update(tum_ardrone::filter_stateConstPtr state)
+// based on the currently active command and the drone's position.
+ControlCommand DroneController::update(nav_msgs::OdometryConstPtr state)
 {
-	TooN::Vector<3> pose = TooN::makeVector(state->x, state->y, state->z);
-	double yaw = state->yaw;
-	TooN::Vector<4> speeds = TooN::makeVector(state->dx, state->dy, state->dz, state->dyaw);
-	ptamIsGood = state->ptamState == state->PTAM_BEST || state->ptamState == state->PTAM_GOOD || state->ptamState == state->PTAM_TOOKKF;
-	scaleAccuracy = state->scaleAccuracy;
+	double state_roll, state_pitch, state_yaw;
+	q2rpy(TooN::makeVector(state->pose.pose.orientation.x,
+						   state->pose.pose.orientation.y,
+						   state->pose.pose.orientation.z,
+						   state->pose.pose.orientation.w), &state_roll, &state_pitch, &state_yaw);
+
+	TooN::Vector<3> pose = TooN::makeVector(state->pose.pose.position.x, state->pose.pose.position.y, state->pose.pose.position.z);
+	double yaw = state_yaw;
+	TooN::Vector<4> speeds = TooN::makeVector(state->twist.twist.linear.x, state->twist.twist.linear.y, state->twist.twist.linear.z, state->twist.twist.angular.z);
+	ptamIsGood = state_PTAM == 4 || state_PTAM == 3 || state_PTAM == 5;
+	scaleAccuracy = state_PTAM_scaleAccuracy;
 
 	// calculate (new) errors.
 	TooN::Vector<4> new_err = TooN::makeVector(
@@ -90,7 +94,7 @@ void DroneController::setTarget(DronePosition newTarget)
 	target = newTarget;
 	target.yaw = angleFromTo2(target.yaw,-180,180);
 	targetSetAtClock = getMS()/1000.0;
-	targetNew = TooN::makeVector(1.0,1.0,1.0,1.0);
+	targetNew = TooN::makeVector(100.0,100.0,100.0,100.0);
 	targetValid = true;
 	last_err = i_term = TooN::makeVector(0,0,0,0);
 
@@ -132,17 +136,17 @@ void DroneController::calcControl(TooN::Vector<4> new_err, TooN::Vector<4> d_err
 	if(!ptamIsGood) agr *= 0.75;
 	agr *= scaleAccuracy;
 
-	//TooN::Vector<4> d_term = new_err - last_err;	// d-term:just differentiate
-	TooN::Vector<4> d_term = d_error;
+	TooN::Vector<4> d_term = new_err - last_err;	// d-term:just differentiate
+	//TooN::Vector<4> d_term = d_error;
 	TooN::Vector<4> p_term = new_err;	// p-term is error.
 
 	// rotate error to drone CS, invert pitch
-	double yawRad = yaw * 2 * 3.141592 / 360;	
-	d_term[0] = cos(yawRad)*d_error[0] - sin(yawRad)*d_error[1];
-	d_term[1] = - sin(yawRad)*d_error[0] - cos(yawRad)*d_error[1];
+	double yawRad = yaw / 180 * 3.141592;	
+	d_term[0] = cos(yawRad)*d_error[0] + sin(yawRad)*d_error[1];
+	d_term[1] = -sin(yawRad)*d_error[0] + cos(yawRad)*d_error[1];
 
-	p_term[0] = cos(yawRad)*new_err[0] - sin(yawRad)*new_err[1];
-	p_term[1] = - sin(yawRad)*new_err[0] - cos(yawRad)*new_err[1];
+	p_term[0] = cos(yawRad)*new_err[0] + sin(yawRad)*new_err[1];
+	p_term[1] = -sin(yawRad)*new_err[0] + cos(yawRad)*new_err[1];
 
 
 	// integrate & cap
@@ -159,14 +163,9 @@ void DroneController::calcControl(TooN::Vector<4> new_err, TooN::Vector<4> d_err
 			i_term[i] = 0; targetNew[i] = 0;
 		}
 
-
-
-
-
 	// YAW
 	lastSentControl.yaw = Kp_yaw * p_term[3] + Kd_yaw * d_term[3];	// yaw can be translated directly
 	lastSentControl.yaw = std::min(max_yaw,std::max(-max_yaw,(double)(lastSentControl.yaw*agr)));
-
 
 
 	// RP
@@ -180,41 +179,14 @@ void DroneController::calcControl(TooN::Vector<4> new_err, TooN::Vector<4> d_err
 	double cX_i = Ki_rp * i_term[0];
 	double cY_i = Ki_rp * i_term[1];
 
-
-	/*
-	// modulate non-linearely
-	float rp_mod_cut1 = 0.0; 
-	float rp_mod_cut2 = 0.0; 
-	float rp_mod_exp = 2;
-
-	if(cX_p <  rp_mod_cut1 && cX_p > 0) 
-		cX_p = pow((float)cX_p,rp_mod_exp) / pow(rp_mod_cut1,rp_mod_exp-1);
-	else if(cX_p <  rp_mod_cut2 && cX_p > 0) 
-		cX_p = rp_mod_cut1 + pow((float)cX_p-rp_mod_cut1,1/rp_mod_exp) / pow(rp_mod_cut2-rp_mod_cut1,1/rp_mod_exp-1);
-
-	if(cX_p > - rp_mod_cut1 && cX_p < 0) 
-		cX_p = - pow(-(float)cX_p,rp_mod_exp) / pow(rp_mod_cut1,rp_mod_exp-1);
-	else if(cX_p >  - rp_mod_cut2 && cX_p < 0) 
-		cX_p = - (rp_mod_cut1 + pow(-(float)cX_p-rp_mod_cut1,1/rp_mod_exp) / pow(rp_mod_cut2-rp_mod_cut1,1/rp_mod_exp-1));
-
-	if(cY_p <  rp_mod_cut1 && cY_p > 0) 
-		cY_p = pow((float)cY_p,rp_mod_exp) / pow(rp_mod_cut1,rp_mod_exp-1);
-	else if(cY_p <  rp_mod_cut2 && cY_p > 0) 
-		cY_p = rp_mod_cut1 + pow((float)cY_p-rp_mod_cut1,1/rp_mod_exp) / pow(rp_mod_cut2-rp_mod_cut1,1/rp_mod_exp-1);
-
-	if(cY_p > - rp_mod_cut1 && cY_p < 0) 
-		cY_p = - pow(-(float)cY_p,rp_mod_exp) / pow(rp_mod_cut1,rp_mod_exp-1);
-	else if(cY_p >  - rp_mod_cut2 && cY_p < 0) 
-		cY_p = - (rp_mod_cut1 + pow(-(float)cY_p-rp_mod_cut1,1/rp_mod_exp) / pow(rp_mod_cut2-rp_mod_cut1,1/rp_mod_exp-1));
-	*/
-
-
-	lastSentControl.roll = cX_p + cX_d + cX_i;
-	lastSentControl.pitch = cY_p + cY_d + cY_i;
+	lastSentControl.pitch = cX_p + cX_d + cX_i;
+	lastSentControl.roll = cY_p + cY_d + cY_i;
 
 	// clip
-	lastSentControl.roll = std::min(max_rp,std::max(-max_rp,(double)(lastSentControl.roll*agr)));
 	lastSentControl.pitch = std::min(max_rp,std::max(-max_rp,(double)(lastSentControl.pitch*agr)));
+	lastSentControl.roll = std::min(max_rp,std::max(-max_rp,(double)(lastSentControl.roll*agr)));
+
+
 
 	// GAZ
 	double gazP = Kp_gaz * p_term[2];

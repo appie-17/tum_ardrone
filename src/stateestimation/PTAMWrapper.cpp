@@ -18,31 +18,10 @@
  *  along with tum_ardrone.  If not, see <http://www.gnu.org/licenses/>.
  */
  
- 
- 
 #include "PTAMWrapper.h"
-#include <cvd/gl_helpers.h>
-#include <gvars3/instances.h>
-#include "PTAM/ATANCamera.h"
-#include "PTAM/MapMaker.h"
-#include "PTAM/Tracker.h"
-#include "PTAM/Map.h"
-#include "PTAM/MapPoint.h"
-#include "../HelperFunctions.h"
-#include "Predictor.h"
-#include "DroneKalmanFilter.h"
-#include <cv_bridge/cv_bridge.h>
-#include <sensor_msgs/image_encodings.h>
-#include "GLWindow2.h"
-#include "EstimationNode.h"
-#include <iostream>
-#include <fstream>
-#include <string>
 
-pthread_mutex_t PTAMWrapper::navInfoQueueCS = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t PTAMWrapper::odomInfoQueueCS = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t PTAMWrapper::shallowMapCS = PTHREAD_MUTEX_INITIALIZER;
-
-pthread_mutex_t PTAMWrapper::logScalePairs_CS = PTHREAD_MUTEX_INITIALIZER;
 
 PTAMWrapper::PTAMWrapper(DroneKalmanFilter* f, EstimationNode* nde)
 {
@@ -59,7 +38,6 @@ PTAMWrapper::PTAMWrapper(DroneKalmanFilter* f, EstimationNode* nde)
 	
 	mapPointsTransformed = std::vector<tvec3>();
 	keyFramesTransformed = std::vector<tse3>();
-
 	
 	predConvert = new Predictor();
 	predIMUOnlyForScale = new Predictor();
@@ -73,8 +51,6 @@ PTAMWrapper::PTAMWrapper(DroneKalmanFilter* f, EstimationNode* nde)
 	minKFTimeDist = 0;
 
 	maxKF = 60;
-
-	logfileScalePairs = 0;
 }
 
 void PTAMWrapper::ResetInternal()
@@ -82,35 +58,19 @@ void PTAMWrapper::ResetInternal()
 	mimFrameBW.resize(CVD::ImageRef(frameWidth, frameHeight));
 	mimFrameBW_workingCopy.resize(CVD::ImageRef(frameWidth, frameHeight));
 
-
 	if(mpMapMaker != 0) delete mpMapMaker;
 	if(mpMap != 0) delete mpMap;
 	if(mpTracker != 0) delete mpTracker;
 	if(mpCamera != 0) delete mpCamera;
 
-
-	// read camera calibration (yes, its done here)
-	std::string file = node->calibFile;
-	while(node->arDroneVersion == 0)
-	{
-		std::cout << "Waiting for first navdata to determine drone version!" << std::endl;
-		usleep(250000);
-	}
-	if(file.size()==0)
-	{
-		if(node->arDroneVersion == 1)
-			file = node->packagePath + "/camcalib/ardrone1_default.txt";
-		else if(node->arDroneVersion == 2)
-			file = node->packagePath + "/camcalib/ardrone2_default.txt";
-	}
-
+	std::string file;
+	
+	file = node->calibFile;
 	std::ifstream fleH (file.c_str());
 	TooN::Vector<5> camPar;
 	fleH >> camPar[0] >> camPar[1] >> camPar[2] >> camPar[3] >> camPar[4];
 	fleH.close();
 	std::cout<< "Set Camera Paramerer to: " << camPar[0] << " " << camPar[1] << " " << camPar[2] << " " << camPar[3] << " " << camPar[4] << std::endl;
-
-
 
 	mpMap = new Map;
 	mpCamera = new ATANCamera(camPar);
@@ -194,7 +154,6 @@ void PTAMWrapper::run()
 
 	ResetInternal();
 
-
 	snprintf(charBuf,200,"Video resolution: %d x %d",frameWidth,frameHeight);
 	ROS_INFO(charBuf);
 	node->publishCommand(std::string("u l ")+charBuf);
@@ -208,7 +167,6 @@ void PTAMWrapper::run()
 		desiredWindowSize = CVD::ImageRef(frameWidth*2,frameHeight*2);
 	else
 		desiredWindowSize = CVD::ImageRef(frameWidth,frameHeight);
-
 
 	boost::unique_lock<boost::mutex> lock(new_frame_signal_mutex);
 
@@ -228,7 +186,6 @@ void PTAMWrapper::run()
 			lock.unlock();
 
 			HandleFrame();
-
 
 			if(changeSizeNextRender)
 			{
@@ -256,7 +213,6 @@ void PTAMWrapper::HandleFrame()
 {
 	//printf("tracking Frame at ms=%d (from %d)\n",getMS(ros::Time::now()),mimFrameTime-filter->delayVideo);
 
-
 	// prep data
 	msg = "";
 	ros::Time startedFunc = ros::Time::now();
@@ -265,11 +221,10 @@ void PTAMWrapper::HandleFrame()
 	if(resetPTAMRequested)
 		ResetInternal();
 
-
 	// make filter thread-safe.
 	// --------------------------- ROLL FORWARD TIL FRAME. This is ONLY done here. ---------------------------
 	pthread_mutex_lock( &filter->filter_CS );
-	//filter->predictUpTo(mimFrameTime,true, true);
+
 	TooN::Vector<10> filterPosePrePTAM = filter->getPoseAtAsVec(mimFrameTime_workingCopy-filter->delayVideo,true);
 	pthread_mutex_unlock( &filter->filter_CS );
 
@@ -278,8 +233,6 @@ void PTAMWrapper::HandleFrame()
 	myGLWindow->SetupVideoOrtho();
 	myGLWindow->SetupVideoRasterPosAndZoom();
 
-
-
 	// 1. transform with filter
 	TooN::Vector<6> PTAMPoseGuess = filter->backTransformPTAMObservation(filterPosePrePTAM.slice<0,6>());
 	// 2. convert to se3
@@ -287,10 +240,9 @@ void PTAMWrapper::HandleFrame()
 	// 3. multiply with rotation matrix	
 	TooN::SE3<> PTAMPoseGuessSE3 = predConvert->droneToFrontNT * predConvert->globaltoDrone;
 
-
 	// set
 	mpTracker->setPredictedCamFromW(PTAMPoseGuessSE3);
-	//mpTracker->setLastFrameLost((isGoodCount < -10), (videoFrameID%2 != 0));
+	
 	mpTracker->setLastFrameLost((isGoodCount < -20), (mimFrameSEQ_workingCopy%3 == 0));
 
 	// track
@@ -313,9 +265,6 @@ void PTAMWrapper::HandleFrame()
 	// 3. transform with filter
 	TooN::Vector<6> PTAMResultTransformed = filter->transformPTAMObservation(PTAMResult);
 
-
-
-
 	// init failed?
 	if(mpTracker->lastStepResult == mpTracker->I_FAILED)
 	{
@@ -331,7 +280,7 @@ void PTAMWrapper::HandleFrame()
 		ROS_INFO("initial scale: %f\n",mpMapMaker->initialScaleFactor*1.2);
 		node->publishCommand("u l PTAM initialized (took second KF)");
 		framesIncludedForScaleXYZ = -1;
-		lockNextFrame = true;
+		lockNextFrame = true;		
 		imuOnlyPred->resetPos();
 	}
 	if(mpTracker->lastStepResult == mpTracker->I_FIRST)
@@ -341,16 +290,12 @@ void PTAMWrapper::HandleFrame()
 
 
 
-
-
-
 	// --------------------------- assess result ------------------------------
 	bool isGood = true;
 	bool isVeryGood = true;
 	// calculate absolute differences.
 	TooN::Vector<6> diffs = PTAMResultTransformed - filterPosePrePTAM.slice<0,6>();
 	for(int i=0;1<1;i++) diffs[i] = abs(diffs[i]);
-
 
 	if(filter->getNumGoodPTAMObservations() < 10 && mpMap->IsGood())
 	{
@@ -429,10 +374,10 @@ void PTAMWrapper::HandleFrame()
 		filter->addFakePTAMObservation(mimFrameTime_workingCopy-filter->delayVideo);
 
 	filterPosePostPTAM = filter->getCurrentPoseSpeedAsVec();
+		
 	pthread_mutex_unlock( &filter->filter_CS );
 
 	TooN::Vector<6> filterPosePostPTAMBackTransformed = filter->backTransformPTAMObservation(filterPosePostPTAM.slice<0,6>());
-
 
 	// if interval is started: add one step.
 	int includedTime = mimFrameTime_workingCopy - ptamPositionForScaleTakenTimestamp;
@@ -451,25 +396,17 @@ void PTAMWrapper::HandleFrame()
 
 		if(includedTime >= 2000 && framesIncludedForScaleXYZ > 1)	// ADD! (if too many, was resetted before...)
 		{
+
 			TooN::Vector<3> diffPTAM = filterPosePostPTAMBackTransformed.slice<0,3>() - PTAMPositionForScale;
 			bool zCorrupted, allCorrupted;
-			float pressureStart = 0, pressureEnd = 0;
-			TooN::Vector<3> diffIMU = evalNavQue(ptamPositionForScaleTakenTimestamp - filter->delayVideo + filter->delayXYZ,mimFrameTime_workingCopy - filter->delayVideo + filter->delayXYZ,&zCorrupted, &allCorrupted, &pressureStart, &pressureEnd);
-
-			pthread_mutex_lock(&logScalePairs_CS);
-			if(logfileScalePairs != 0)
-				(*logfileScalePairs) <<
-						pressureStart << " " <<
-						pressureEnd << " " <<
-						diffIMU[2] << " " <<
-						diffPTAM[2] << std::endl;
-			pthread_mutex_unlock(&logScalePairs_CS);
-
+			float altdStart = 0, altdEnd = 0;
+			TooN::Vector<3> diffIMU = evalOdomQue(ptamPositionForScaleTakenTimestamp - filter->delayVideo + filter->delayXYZ,mimFrameTime_workingCopy - filter->delayVideo + filter->delayXYZ,&zCorrupted, &allCorrupted, &altdStart, &altdEnd);
 
 			if(!allCorrupted)
 			{
+				node->publishCommand("u l Frames accepted!");
 				// filtering: z more weight, but only if not corrupted.
-				double xyFactor = 0.05;
+				double xyFactor = 0.25;
 				double zFactor = zCorrupted ? 0 : 3;
 			
 				diffPTAM.slice<0,2>() *= xyFactor; diffPTAM[2] *= zFactor;
@@ -495,7 +432,6 @@ void PTAMWrapper::HandleFrame()
 	{
 		filter->scalingFixpoint = PTAMResult.slice<0,3>();
 		lockNextFrame = false;	
-		//filter->useScalingFixpoint = true;
 
 		snprintf(charBuf,500,"locking scale fixpoint to %.3f %.3f %.3f",PTAMResultTransformed[0], PTAMResultTransformed[1], PTAMResultTransformed[2]);
 		ROS_INFO(charBuf);
@@ -524,7 +460,7 @@ void PTAMWrapper::HandleFrame()
 	else if(isGood)
 		PTAMStatus = PTAM_GOOD;
 	else if(mpTracker->lastStepResult == mpTracker->T_DODGY ||
-		mpTracker->lastStepResult == mpTracker->T_GOOD)
+	mpTracker->lastStepResult == mpTracker->T_GOOD)
 		PTAMStatus = PTAM_FALSEPOSITIVE;
 	else
 		PTAMStatus = PTAM_LOST;
@@ -560,7 +496,7 @@ void PTAMWrapper::HandleFrame()
 		if(flushMapKeypoints)
 		{
 			std::ofstream* fle = new std::ofstream();
-			fle->open("pointcloud.txt");
+			fle->open((node->packagePath + "/pointcloud.txt").c_str());
 
 			for(unsigned int i=0;i<mapPointsTransformed.size();i++)
 			{
@@ -576,7 +512,6 @@ void PTAMWrapper::HandleFrame()
 
 			flushMapKeypoints = false;
 		}
-
 
 		pthread_mutex_unlock(&shallowMapCS);
 
@@ -677,33 +612,6 @@ void PTAMWrapper::HandleFrame()
 	}
 
 	lastPTAMResultRaw = PTAMResultSE3; 
-	// ------------------------ LOG --------------------------------------
-	// log!
-	if(node->logfilePTAM != NULL)
-	{
-		TooN::Vector<3> scales = filter->getCurrentScalesForLog();
-		TooN::Vector<3> sums = TooN::makeVector(0,0,0);
-		TooN::Vector<6> offsets = filter->getCurrentOffsets();
-		pthread_mutex_lock(&(node->logPTAM_CS));
-		// log:
-		// - filterPosePrePTAM estimated for videoFrameTimestamp-delayVideo.
-		// - PTAMResulttransformed estimated for videoFrameTimestamp-delayVideo. (using imu only for last step)
-		// - predictedPoseSpeed estimated for lastNfoTimestamp+filter->delayControl	(actually predicting)
-		// - predictedPoseSpeedATLASTNFO estimated for lastNfoTimestamp	(using imu only)
-		if(node->logfilePTAM != NULL)
-			(*(node->logfilePTAM)) << (isGood ? (isVeryGood ? 2 : 1) : 0) << " " <<
-				(mimFrameTime_workingCopy-filter->delayVideo) << " " << filterPosePrePTAM[0] << " " << filterPosePrePTAM[1] << " " << filterPosePrePTAM[2] << " " << filterPosePrePTAM[3] << " " << filterPosePrePTAM[4] << " " << filterPosePrePTAM[5] << " " << filterPosePrePTAM[6] << " " << filterPosePrePTAM[7] << " " << filterPosePrePTAM[8] << " " << filterPosePrePTAM[9] << " " <<
-				filterPosePostPTAM[0] << " " << filterPosePostPTAM[1] << " " << filterPosePostPTAM[2] << " " << filterPosePostPTAM[3] << " " << filterPosePostPTAM[4] << " " << filterPosePostPTAM[5] << " " << filterPosePostPTAM[6] << " " << filterPosePostPTAM[7] << " " << filterPosePostPTAM[8] << " " << filterPosePostPTAM[9] << " " << 
-				PTAMResultTransformed[0] << " " << PTAMResultTransformed[1] << " " << PTAMResultTransformed[2] << " " << PTAMResultTransformed[3] << " " << PTAMResultTransformed[4] << " " << PTAMResultTransformed[5] << " " << 
-				scales[0] << " " << scales[1] << " " << scales[2] << " " << 
-				offsets[0] << " " << offsets[1] << " " << offsets[2] << " " << offsets[3] << " " << offsets[4] << " " << offsets[5] << " " <<
-				sums[0] << " " << sums[1] << " " << sums[2] << " " << 
-				PTAMResult[0] << " " << PTAMResult[1] << " " << PTAMResult[2] << " " << PTAMResult[3] << " " << PTAMResult[4] << " " << PTAMResult[5] << " " <<
-				PTAMResultSE3TwistOrg[0] << " " << PTAMResultSE3TwistOrg[1] << " " << PTAMResultSE3TwistOrg[2] << " " << PTAMResultSE3TwistOrg[3] << " " << PTAMResultSE3TwistOrg[4] << " " << PTAMResultSE3TwistOrg[5] << " " <<
-				videoFramePing << " " << mimFrameTimeRos_workingCopy << " " << mimFrameSEQ_workingCopy << std::endl;
-
-		pthread_mutex_unlock(&(node->logPTAM_CS));
-	}
 
 	myGLWindow->swap_buffers();
 	myGLWindow->HandlePendingEvents();
@@ -763,58 +671,26 @@ void PTAMWrapper::renderGrid(TooN::SE3<> camFromWorld)
   glLineWidth(1);
   glColor3f(1,0,0);
 
-
-
 }
 
-TooN::Vector<3> PTAMWrapper::evalNavQue(unsigned int from, unsigned int to, bool* zCorrupted, bool* allCorrupted, float* out_start_pressure, float* out_end_pressure)
+TooN::Vector<3> PTAMWrapper::evalOdomQue(unsigned int from, unsigned int to, bool* zCorrupted, bool* allCorrupted, float* out_start_altd, float* out_end_altd)
 {
 	predIMUOnlyForScale->resetPos();
-
 	int firstAdded = 0, lastAdded = 0;
-	pthread_mutex_lock(&navInfoQueueCS);
+	pthread_mutex_lock(&odomInfoQueueCS);
 	int skipped=0;
 	int used = 0;
 	int firstZ = 0;
+	int altdAverageRange = 1000;
 
-	float sum_first=0, num_first=0, sum_last=0, num_last=0;
-	int pressureAverageRange = 100;
-
-
-	for(std::deque<ardrone_autonomy::Navdata>::iterator cur = navInfoQueue.begin();
-			cur != navInfoQueue.end();
-			)
-	{
-		int curStampMs = getMS(cur->header.stamp);
-
-		if(curStampMs < (int)from-pressureAverageRange)
-			cur = navInfoQueue.erase(cur);
-		else
-		{
-			if(curStampMs >= (int)from-pressureAverageRange && curStampMs <= (int)from+pressureAverageRange)
-			{
-				sum_first += cur->pressure;
-				num_first++;
-			}
-
-			if(curStampMs >= (int)to-pressureAverageRange && curStampMs <= (int)to+pressureAverageRange)
-			{
-				sum_last += cur->pressure;
-				num_last++;
-			}
-			cur++;
-		}
-	}
-
-	for(std::deque<ardrone_autonomy::Navdata>::iterator cur = navInfoQueue.begin();
-			cur != navInfoQueue.end();
+	for(std::deque<nav_msgs::Odometry>::iterator cur = odomInfoQueue.begin();
+			cur != odomInfoQueue.end();
 			cur++
 			)
 	{
 		int frontStamp = getMS(cur->header.stamp);
 		if(frontStamp < from)		// packages before: delete
 		{
-			//navInfoQueue.pop_front();
 			skipped++;
 		}
 		else if(frontStamp >= from && frontStamp <= to)
@@ -822,90 +698,83 @@ TooN::Vector<3> PTAMWrapper::evalNavQue(unsigned int from, unsigned int to, bool
 			if(firstAdded == 0) 
 			{
 				firstAdded = frontStamp;
-				firstZ = cur->altd;
+				firstZ = cur->pose.pose.position.z;
 				predIMUOnlyForScale->z = firstZ*0.001;	// avoid height check initially!
 			}
 			lastAdded = frontStamp;
 			// add
 			predIMUOnlyForScale->predictOneStep(&(*cur));
 			// pop
-			//navInfoQueue.pop_front();
+			//odomInfoQueue.pop_front();
 			used++;
 		}
 		else
 			break;
 
 	}
-	//printf("QueEval: before: %i; skipped: %i, used: %i, left: %i\n", totSize, skipped, used, navInfoQueue.size());
+//	printf("QueEval: before: %i; skipped: %i, used: %i, left: %i\n", totSize, skipped, used, odomInfoQueue.size());
 	predIMUOnlyForScale->z -= firstZ*0.001;	// make height to height-diff
 
 	*zCorrupted = predIMUOnlyForScale->zCorrupted;
-	*allCorrupted = abs(firstAdded - (int)from) + abs(lastAdded - (int)to) > 80;
-	pthread_mutex_unlock(&navInfoQueueCS);
+	*allCorrupted = abs(firstAdded - (int)from) + abs(lastAdded - (int)to) > 80000;
+	pthread_mutex_unlock(&odomInfoQueueCS);
 
 	if(*allCorrupted)
 		printf("scalePackage corrupted (imu data gap for %ims)\n",abs(firstAdded - (int)from) + abs(lastAdded - (int)to));
 	else if(*zCorrupted)
+	{		
 		printf("scalePackage z corrupted (jump in meters: %.3f)!\n",predIMUOnlyForScale->zCorruptedJump);
-
-	printf("first: %f (%f); last: %f (%f)=> diff: %f (z alt diff: %f)\n",
-			sum_first/num_first,
-			num_first,
-			sum_last/num_last,
-			num_last,
-			sum_last/num_last - sum_first/num_first,
-			predIMUOnlyForScale->z
-	);
-
-
-	*out_end_pressure = sum_last/num_last;
-	*out_start_pressure = sum_first/num_first;
+	}
 
 	return TooN::makeVector(predIMUOnlyForScale->x,predIMUOnlyForScale->y,predIMUOnlyForScale->z);
 }
 
-void PTAMWrapper::newNavdata(ardrone_autonomy::Navdata* nav)
+void PTAMWrapper::newOdom(nav_msgs::Odometry* odom)
 {
-	lastNavinfoReceived = *nav;
+	lastOdominfoReceived = *odom;
 
-	if(getMS(lastNavinfoReceived.header.stamp) > 2000000)
+	double odom_roll, odom_pitch, odom_yaw;
+
+	q2rpy(TooN::makeVector(lastOdominfoReceived.pose.pose.orientation.x,
+					 lastOdominfoReceived.pose.pose.orientation.y,
+					 lastOdominfoReceived.pose.pose.orientation.z,
+					 lastOdominfoReceived.pose.pose.orientation.w), &odom_roll, &odom_pitch, &odom_yaw);
+
+	if(getMS(lastOdominfoReceived.header.stamp) > 2000000)
 	{
-		printf("PTAMSystem: ignoring navdata package with timestamp %f\n", lastNavinfoReceived.tm);
+		printf("PTAMSystem: ignoring navdata package with timestamp %f\n", getMS(lastOdominfoReceived.header.stamp));
 		return;
 	}
-	if(lastNavinfoReceived.header.seq > 2000000 || lastNavinfoReceived.header.seq < 0)
+
+	if(lastOdominfoReceived.header.seq > 2000000 || lastOdominfoReceived.header.seq < 0)
 	{
-		printf("PTAMSystem: ignoring navdata package with ID %i\n", lastNavinfoReceived.header.seq);
+		printf("PTAMSystem: ignoring navdata package with ID %i\n", lastOdominfoReceived.header.seq);
 		return;
 	}
 
 	// correct yaw with filter-yaw (!):
-	lastNavinfoReceived.rotZ = filter->getCurrentPose()[5];
+	odom_yaw = filter->getCurrentPose()[5];
 
-	pthread_mutex_lock( &navInfoQueueCS );
-	navInfoQueue.push_back(lastNavinfoReceived);
+	pthread_mutex_lock( &odomInfoQueueCS );
+	odomInfoQueue.push_back(lastOdominfoReceived);
 
-	if(navInfoQueue.size() > 1000)	// respective 5s
+	if(odomInfoQueue.size() > 1000)	// respective 5s
 	{
-		navInfoQueue.pop_front();
-		if(!navQueueOverflown)
-			printf("NavQue Overflow detected!\n");
-		navQueueOverflown = true;
+		odomInfoQueue.pop_front();
+		if(!odomQueueOverflown)
+			printf("odomQue Overflow detected!\n");
+		odomQueueOverflown = true;
 	}
-	pthread_mutex_unlock( &navInfoQueueCS );
-
-	//filter->setPing(nav->pingNav, nav->pingVid);
+	pthread_mutex_unlock( &odomInfoQueueCS );
 
 	imuOnlyPred->yaw = filter->getCurrentPose()[5];
-	imuOnlyPred->predictOneStep(&lastNavinfoReceived);
+	imuOnlyPred->predictOneStep(&lastOdominfoReceived);
 }
 
 void PTAMWrapper::newImage(sensor_msgs::ImageConstPtr img)
 {
-
 	// convert to CVImage
 	cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(img, sensor_msgs::image_encodings::MONO8);
-
 
 	boost::unique_lock<boost::mutex> lock(new_frame_signal_mutex);
 
@@ -932,8 +801,6 @@ void PTAMWrapper::newImage(sensor_msgs::ImageConstPtr img)
 	new_frame_signal.notify_all();
 }
 
-
-
 void PTAMWrapper::on_key_down(int key)
 {
 	if(key == 114) // r
@@ -951,29 +818,6 @@ void PTAMWrapper::on_key_down(int key)
 	if(key == 107) // k
 	{
 		node->publishCommand("p keyframe");
-	}
-	if(key == 108) // l
-	{
-		node->publishCommand("toggleLog");
-	}
-	if(key == 115) // s
-	{
-		pthread_mutex_lock(&logScalePairs_CS);
-		if(logfileScalePairs == 0)
-		{
-			logfileScalePairs = new std::ofstream();
-			logfileScalePairs->open ("logScalePairs.txt");
-			printf("\nSTART logging scale pairs\n\n");
-		}
-		else
-		{
-			logfileScalePairs->flush();
-			logfileScalePairs->close();
-			delete logfileScalePairs;
-			logfileScalePairs = NULL;
-			printf("\nEND logging scale pairs\n\n");
-		}
-		pthread_mutex_unlock(&logScalePairs_CS);
 	}
 
 	if(key == 109) // m

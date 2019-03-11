@@ -21,16 +21,38 @@
 #ifndef __PTAMWRAPPER_H
 #define __PTAMWRAPPER_H
 
+
+#include "Predictor.h"
+#include "EstimationNode.h"
+#include "DroneKalmanFilter.h"
+#include "MouseKeyHandler.h"
+#include "../HelperFunctions.h"
+
 #include "GLWindow2.h"
 #include "TooN/se3.h"
-#include <deque>
-#include "sensor_msgs/Image.h"
-#include "ardrone_autonomy/Navdata.h"
+#include "boost/thread.hpp"
+#include "cvd/gl_helpers.h"
 #include "cvd/thread.h"
 #include "cvd/image.h"
 #include "cvd/byte.h"
-#include "MouseKeyHandler.h"
-#include "boost/thread.hpp"
+
+#include "sensor_msgs/Image.h"
+#include "sensor_msgs/image_encodings.h"
+#include "nav_msgs/Odometry.h"
+
+#include <deque>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <sstream>
+#include <cv_bridge/cv_bridge.h>
+#include <gvars3/instances.h>
+
+#include "PTAM/ATANCamera.h"
+#include "PTAM/MapMaker.h"
+#include "PTAM/Tracker.h"
+#include "PTAM/Map.h"
+#include "PTAM/MapPoint.h"
 
 class Map;
 class MapMaker;
@@ -40,7 +62,6 @@ class Predictor;
 class DroneKalmanFilter;
 class DroneFlightModule;
 class EstimationNode;
-
 
 typedef TooN::Vector<3> tvec3;
 typedef TooN::SE3<> tse3;
@@ -98,13 +119,11 @@ private:
 	double minKFWiggleDist;
 	double minKFDist;
 
-
 	Predictor* imuOnlyPred;	
 	int lastScaleEKFtimestamp;
 	
 	bool resetPTAMRequested;
 	enum {UI_NONE = 0, UI_DEBUG = 1, UI_PRES = 2} drawUI;
-
 
 	bool forceKF;
 
@@ -120,9 +139,9 @@ private:
 	TooN::Vector<3> PTAMPositionForScale;
 	int ptamPositionForScaleTakenTimestamp;
 	int framesIncludedForScaleXYZ;
-	std::deque<ardrone_autonomy::Navdata> navInfoQueue;
-	bool navQueueOverflown;
-	TooN::Vector<3> evalNavQue(unsigned int from, unsigned int to, bool* zCorrupted, bool* allCorrupted, float* out_start_pressure, float* out_end_pressure);
+	std::deque<nav_msgs::Odometry> odomInfoQueue;
+	bool odomQueueOverflown;
+	TooN::Vector<3> evalOdomQue(unsigned int from, unsigned int to, bool* zCorrupted, bool* allCorrupted, float* out_start_altd, float* out_end_altd);
 	
 
 	// keep Running
@@ -141,25 +160,22 @@ private:
 
 	int videoFramePing;
 
-	std::ofstream* logfileScalePairs;
-	static pthread_mutex_t logScalePairs_CS; //pthread_mutex_lock( &cs_mutex );
-
 public:
 
 	PTAMWrapper(DroneKalmanFilter* dkf, EstimationNode* nde);
 	~PTAMWrapper(void);
 
-	// ROS exclusive: called by external thread if a new image/navdata is received.
+	// ROS exclusive: called by external thread if a new image/odom is received.
 	// takes care of sync etc.
 	void newImage(sensor_msgs::ImageConstPtr img);
-	void newNavdata(ardrone_autonomy::Navdata* nav);
+	void newOdom(nav_msgs::Odometry* odom);
 	bool newImageAvailable;
 	void setPTAMPars(double minKFTimeDist, double minKFWiggleDist, double minKFDist);
 
 	bool handleCommand(std::string s);
 	bool mapLocked;
 	int maxKF;
-	static pthread_mutex_t navInfoQueueCS; //pthread_mutex_lock( &cs_mutex );
+	static pthread_mutex_t odomInfoQueueCS; //pthread_mutex_lock( &cs_mutex );
 	static pthread_mutex_t shallowMapCS; //pthread_mutex_lock( &cs_mutex );
 
 	// Event handling routines.
@@ -172,12 +188,9 @@ public:
 	// resets PTAM tracking
 	inline void Reset() {resetPTAMRequested = true;};
 
-
 	// start and stop system and respective thread.
 	void startSystem();
 	void stopSystem();
-
-
 
 	enum {PTAM_IDLE = 0, PTAM_INITIALIZING = 1, PTAM_LOST = 2, PTAM_GOOD = 3, PTAM_BEST = 4, PTAM_TOOKKF = 5, PTAM_FALSEPOSITIVE = 6} PTAMStatus;
 	TooN::SE3<> lastPTAMResultRaw;
@@ -187,7 +200,7 @@ public:
 	std::vector<tvec3> mapPointsTransformed;
 	std::vector<tse3> keyFramesTransformed;
 
-	ardrone_autonomy::Navdata lastNavinfoReceived;
+	nav_msgs::Odometry lastOdominfoReceived;
 
 	int PTAMInitializedClock;
 

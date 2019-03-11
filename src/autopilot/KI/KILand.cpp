@@ -34,7 +34,7 @@ KILand::~KILand(void)
 {
 }
 
-bool KILand::update(const tum_ardrone::filter_stateConstPtr statePtr)
+bool KILand::update(const nav_msgs::OdometryConstPtr statePtr)
 {
 	if(fresh)
 	{

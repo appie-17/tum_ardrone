@@ -28,14 +28,15 @@
 #include "TooN/so3.h"
 #include "TooN/se3.h"
 #include <string>
-#include <ardrone_autonomy/Navdata.h>
+#include "nav_msgs/Odometry.h"
+#include "tf/tf.h"
 
 
 // handles the drone's coordinate frames.
 // drone: coordinate system of drone. at zero equals global CS
 //		  positive z: "up"
-//		  positive x: "right"
-//		  positive y: "front"
+//		  positive x: "front"
+//		  positive y: "right?"
 
 // front: axis directions as in drone.
 //		  center at (0,0.2,0.025)_drone
@@ -72,6 +73,9 @@ public:
 	// matrix from front cam CO to drone CO, without translation (!)
 	static const TooN::SE3<double> frontToDroneNT;
 	static const TooN::SE3<double> droneToFrontNT;
+	
+	static const TooN::SO3<double> rotateZ;
+//	static const TooN::SE3<double> rotateZInverse;
 
 	// --------------------- current drone state in various represenatations -----------------------
 	// current quadcopter position saved in three ways:
@@ -97,8 +101,6 @@ public:
 	double lastAddedDronetime;
 	double zCorruptedJump;
 
-
-
 	// ------------------------- set internal pose from some representation.-----------------------------------------
 	// all representations are automatically adjusted.
 	void setPosRPY(double newX, double newY, double newZ, double newRoll, double newPitch, double newYaw);
@@ -107,7 +109,7 @@ public:
 
 	// -------------------------- prediction -----------------------------------------------------------------------
 
-	void predictOneStep(ardrone_autonomy::Navdata* nfo);
+	void predictOneStep(nav_msgs::Odometry* nfo);
 	void resetPos();
 	
 	Predictor(std::string basePath="");

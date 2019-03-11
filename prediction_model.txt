@@ -1,0 +1,9 @@
+rosbag record -O calibFlight.bag /parrot_drone/navdata /parrot_drone/cmd_vel
+rosbag play -l calibFlight.bag
+
+rosrun tum_ardrone drone_stateestimation __name:=drone_stateestimation2 /parrot_drone/predictedPose:=/parrot_drone/predictedPose2
+rosrun tum_ardrone drone_stateestimation
+
+rqt_plot /parrot_drone/predictedPose/dx,/parrot_drone/predictedPose2/dx
+
+

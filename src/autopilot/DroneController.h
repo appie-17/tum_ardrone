@@ -21,13 +21,11 @@
 #ifndef __DRONECONTROLLER_H
 #define __DRONECONTROLLER_H
  
- 
- 
-
 #include "TooN/se3.h"
 #include <queue>
 #include "geometry_msgs/Twist.h"
-#include "tum_ardrone/filter_state.h"
+#include "nav_msgs/Odometry.h"
+#include "../HelperFunctions.h"
 
 class ControlNode;
 
@@ -86,8 +84,8 @@ private:
 
 public:
 
-	// generates and sends a new control command to the drone, based on the currently active command ant the drone's position.
-	ControlCommand update(tum_ardrone::filter_stateConstPtr);
+	// generates and sends a new control command to the drone, based on the currently active command and the drone's position.
+	ControlCommand update(nav_msgs::OdometryConstPtr);
 
 	ControlNode* node;
 
@@ -106,10 +104,10 @@ public:
 	DroneController(void);
 	~DroneController(void);
 
-
-
-
-
+	int state_PTAM;
+	double state_PTAM_scale;
+	double state_PTAM_scaleAccuracy;
+	
 	// PID control parameters. settable via dynamic_reconfigure
 	// target is where i want to get to.
 	// pose and yaw are where i am.

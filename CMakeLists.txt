@@ -7,7 +7,8 @@ project(tum_ardrone)
 
 ## Find catkin macros and libraries
 find_package(catkin REQUIRED COMPONENTS
-  ardrone_autonomy
+  tf
+  parrot_drone
   cv_bridge
   dynamic_reconfigure
   geometry_msgs
@@ -17,6 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   roscpp
   rospy
+  roslib
 )
 
 # Compile third party libs
@@ -42,7 +44,8 @@ generate_dynamic_reconfigure_options(
 ################################################
 
 ## Generate messages in the 'msg' folder
-add_message_files(FILES filter_state.msg)
+add_message_files(FILES drone_state.msg
+						ptam_state.msg)
 
 ## Generate services in the 'srv' folder
 add_service_files(
@@ -61,7 +64,7 @@ generate_messages(DEPENDENCIES std_msgs)
 ###################################
 ## catkin specific configuration ##
 ###################################
-catkin_package(CATKIN_DEPENDS message_runtime std_msgs ardrone_autonomy)
+catkin_package(CATKIN_DEPENDS message_runtime std_msgs parrot_drone)
 
 ###########
 ## Build ##
@@ -171,7 +174,7 @@ target_link_libraries(drone_autopilot ${catkin_LIBRARIES})
 add_dependencies(drone_autopilot thirdparty ${PROJECT_NAME}_gencpp ${PROJECT_NAME}_gencfg)
 
 # ---------------------------- GUI --------------------------------------------------
-# set header ans source files
+# set header and source files
 set(GUI_SOURCE_FILES         
 	src/UINode/main_GUI.cpp  
 	src/UINode/tum_ardrone_gui.cpp  

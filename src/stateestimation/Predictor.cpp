@@ -18,20 +18,17 @@
  *  along with tum_ardrone.  If not, see <http://www.gnu.org/licenses/>.
  */
  
- 
- 
 #include "Predictor.h"
 #include "../HelperFunctions.h"
 
 const TooN::SE3<double> Predictor::droneToBottom = TooN::SE3<double>(TooN::SO3<double>(TooN::makeVector(3.14159265,0,0)),TooN::makeVector(0,0,0));
 const TooN::SE3<double> Predictor::bottomToDrone = Predictor::droneToBottom.inverse();
 
-const TooN::SE3<double> Predictor::droneToFront = TooN::SE3<double>(TooN::SO3<double>(TooN::makeVector(3.14159265/2,0,0)),TooN::makeVector(0,0.025,-0.2));
+const TooN::SE3<double> Predictor::droneToFront = TooN::SE3<double>(TooN::SO3<double>(TooN::makeVector(3.14159265/2,0, 0)),TooN::makeVector(0.0,0.015,-0.04));
 const TooN::SE3<double> Predictor::frontToDrone = Predictor::droneToFront.inverse();
 
-const TooN::SE3<double> Predictor::droneToFrontNT = TooN::SE3<double>(TooN::SO3<double>(TooN::makeVector(3.14159265/2,0,0)),TooN::makeVector(0,0,0));
+const TooN::SE3<double> Predictor::droneToFrontNT = TooN::SE3<double>(TooN::SO3<double>(TooN::makeVector(3.14159265/2,0, 0)),TooN::makeVector(0,0,0));
 const TooN::SE3<double> Predictor::frontToDroneNT = Predictor::droneToFrontNT.inverse();
-
 
 // load distortion matrices
 Predictor::Predictor(std::string basePath)
@@ -107,36 +104,48 @@ void Predictor::setPosSE3_droneToGlobal(TooN::SE3<double> newDroneToGlobal)
 
 // watch out: does NOT update any matrices, only (x,y,z,r,p,y)!!!!!!!
 // also: does not filter z-data, only sets corrupted-flag...
-void Predictor::predictOneStep(ardrone_autonomy::Navdata* nfo)
+void Predictor::predictOneStep(nav_msgs::Odometry* nfo)
 {
-	double timespan = nfo->tm - lastAddedDronetime;	// in micros
+	tf::Quaternion q(nfo->pose.pose.orientation.x,
+					 nfo->pose.pose.orientation.y,
+					 nfo->pose.pose.orientation.z,
+					 nfo->pose.pose.orientation.w);
+	tf::Matrix3x3 m(q);
+	double nfo_roll, nfo_pitch, nfo_yaw;
+	m.getRPY(nfo_roll, nfo_pitch, nfo_yaw);
+
+	double timespan = getMS(nfo->header.stamp) - lastAddedDronetime; //in milis
+	lastAddedDronetime = getMS(nfo->header.stamp);
+
+/*	double timespan = nfo->tm - lastAddedDronetime;	// in micros
 	lastAddedDronetime = nfo->tm;
+*/
 	if(timespan > 50000 || timespan < 1)
 		timespan = std::max(0.0,std::min(5000.0,timespan));	// clamp strange values
 
 	// horizontal speed integration
 	// (mm / s)/1.000 * (mics/1.000.000) = meters.
-	double dxDrone = nfo->vx * timespan / 1000000000;	// in meters
-	double dyDrone = nfo->vy * timespan / 1000000000;	// in meters
+	double dxDrone = nfo->twist.twist.linear.x * timespan / 1000;	// in meters
+	double dyDrone = nfo->twist.twist.linear.y * timespan / 1000;	// in meters
 
-	double yawRad = (nfo->rotZ/1000.0) / (180.0/3.1415);
+	double yawRad = (nfo_yaw) / (180.0/3.1415);
 	x += sin(yawRad)*dxDrone+cos(yawRad)*dyDrone;
 	y += cos(yawRad)*dxDrone-sin(yawRad)*dyDrone;
 
 	// height
-	if(abs(z - (double)nfo->altd*0.001) > 0.12)
+	if(abs(z - (double)nfo->pose.pose.position.z*0.001) > 0.35)
 	{
-		if(std::abs(z - (double)nfo->altd*0.001) > abs(zCorruptedJump))
-			zCorruptedJump = z - (double)nfo->altd*0.001;
+		if(std::abs(z - (double)nfo->pose.pose.position.z*0.001) > abs(zCorruptedJump))
+			zCorruptedJump = z - (double)nfo->pose.pose.position.z*0.001;
 		zCorrupted = true;
 	}
 
-	z = nfo->altd*0.001;
+	z = nfo->pose.pose.position.z*0.001;
 
 	// angles
-	roll = nfo->rotX/1000.0;
-	pitch = nfo->rotY/1000.0;
-	yaw = nfo->rotZ/1000.0;
+	roll = nfo_roll;
+	pitch = nfo_pitch;
+	yaw = nfo_yaw;
 
 }
 void Predictor::resetPos()

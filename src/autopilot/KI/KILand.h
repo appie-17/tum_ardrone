@@ -32,7 +32,7 @@ private:
 public:
 	KILand(void);
 	~KILand(void);
-	bool update(const tum_ardrone::filter_stateConstPtr statePtr);
+	bool update(const nav_msgs::OdometryConstPtr statePtr);
 };
 
 #endif /* __KILAND_H */

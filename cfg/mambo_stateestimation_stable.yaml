@@ -1,0 +1,51 @@
+!!python/object/new:dynamic_reconfigure.encoding.Config
+dictitems:
+  PTAMMapLock: false
+  PTAMMaxKF: 1
+  PTAMMinKFDist: 0.4
+  PTAMMinKFTimeDiff: 2.5
+  PTAMMinKFWiggleDist: 0.1
+  PTAMSyncLock: false
+  RescaleFixOrigin: true
+  UseControlGains: true
+  UseNavdata: true
+  UsePTAM: true
+  c1: 1.0
+  c2: 8.0
+  c3: 1.2
+  c4: 14.0
+  c5: 0.025
+  c6: 90.0
+  c7: 0.08
+  c8: 0.6
+  groups: !!python/object/new:dynamic_reconfigure.encoding.Config
+    dictitems:
+      PTAMMapLock: false
+      PTAMMaxKF: 1
+      PTAMMinKFDist: 0.4
+      PTAMMinKFTimeDiff: 2.5
+      PTAMMinKFWiggleDist: 0.1
+      PTAMSyncLock: false
+      RescaleFixOrigin: true
+      UseControlGains: true
+      UseNavdata: true
+      UsePTAM: true
+      c1: 1.0
+      c2: 8.0
+      c3: 1.2
+      c4: 14.0
+      c5: 0.025
+      c6: 90.0
+      c7: 0.08
+      c8: 0.6
+      groups: !!python/object/new:dynamic_reconfigure.encoding.Config
+        state: []
+      id: 0
+      name: Default
+      parameters: !!python/object/new:dynamic_reconfigure.encoding.Config
+        state: []
+      parent: 0
+      state: true
+      type: ''
+    state: []
+state: []

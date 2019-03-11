@@ -31,7 +31,7 @@ PingThread::PingThread()
 	line1[0] = '\0';
 	line2[0] = '\0';
 	keepRunning = true;
-	measure = true;
+	measure = false;
 
 	p500 = 25;
 	p20000 = 50;
@@ -42,8 +42,6 @@ PingThread::PingThread()
 
 PingThread::~PingThread(void)
 {
-
-
 }
 
 void PingThread::startSystem()
@@ -77,8 +75,8 @@ void PingThread::run()
 {
 	std::cout << "Starting PING Thread" << std::endl;
 
-	sprintf(pingCommand20000,"ping -c 1 -s 20000 -w 1 192.168.1.1");
-	sprintf(pingCommand500,"ping -c 1 -s 500 -w 1 192.168.1.1");
+	sprintf(pingCommand20000,"ping -c 1 -s 20000 -w 1 192.168.99.32");
+	sprintf(pingCommand500,"ping -c 1 -s 500 -w 1 192.168.99.32");
 	ros::Rate r(2.0);
 	FILE *p;
 
@@ -98,13 +96,10 @@ void PingThread::run()
 			r.sleep();
 			if(!keepRunning) break;
 
-
-
 			p = popen(pingCommand20000,"r");
 			fgets(line2, 200, p);
 			fgets(line2, 200, p);
 			pclose(p);
-
 
 			// parse results which should be in line1 and line2
 			double res500 = parsePingResult(line1);

@@ -22,17 +22,26 @@
 #define __ROSTHREAD_H
  
  
+#ifndef Q_MOC_RUN
 
-#include "cvd/thread.h"
-#include "tum_ardrone/filter_state.h"
-#include "std_msgs/String.h"
-#include "geometry_msgs/Twist.h"
-#include "ardrone_autonomy/Navdata.h"
+#include "tum_ardrone_gui.h"
+#include "tum_ardrone/drone_state.h"
+
 #include "ros/ros.h"
+#include "ros/callback_queue.h"
 #include "sensor_msgs/Joy.h"
+#include "geometry_msgs/Twist.h"
+#include "nav_msgs/Odometry.h"
 #include "std_srvs/Empty.h"
+#include "std_srvs/SetBool.h"
+#include "std_msgs/UInt8.h"
 #include "std_msgs/Empty.h"
+#include "std_msgs/String.h"
 
+#include "stdio.h"
+#include "cvd/thread.h"
+#include <unistd.h>
+#endif
 class tum_ardrone_gui;
 
 struct ControlCommand
@@ -56,33 +65,52 @@ private:
 
 	// keep Running
 	bool keepRunning;
-
+	bool pressedZero;
+	bool pressedOne;
+	bool pressedTwo;
+	bool pressedThree;
+	bool pressedFour;	
+	bool pressedFive;	
+	bool pressedSix;
+	bool pressedSeven;
+	bool pressedThirteen;
+	bool pressedFourteen;
+	bool pressedFifteen;
+	bool pressedSixteen;
+	
 	// ros stuff
 	ros::Subscriber dronepose_sub;
-	ros::Publisher vel_pub;
-	ros::Subscriber vel_sub;
-	ros::Subscriber tum_ardrone_sub;
-	ros::Publisher tum_ardrone_pub;
-	ros::Subscriber navdata_sub;
+	ros::Subscriber odom_sub;
 	ros::Subscriber joy_sub;
-	ros::Publisher takeoff_pub;
-	ros::Publisher land_pub;
-	ros::Publisher toggleState_pub;
-	ros::ServiceClient toggleCam_srv;
-	std_srvs::Empty toggleCam_srv_srvs;
-	ros::ServiceClient flattrim_srv;
-	std_srvs::Empty flattrim_srv_srvs;
+	ros::Subscriber vel_sub;
+	ros::Publisher vel_pub;
+	ros::Subscriber comDrone_sub;
+	ros::Publisher comDrone_pub;
 	ros::Subscriber takeoff_sub;
+	ros::Publisher takeoff_pub;
 	ros::Subscriber land_sub;
-	ros::Subscriber toggleState_sub;
-
+	ros::Publisher land_pub;
+	ros::Subscriber flattrim_sub;
+	ros::Publisher flattrim_pub;
+	ros::Subscriber reset_sub;
+	ros::Publisher reset_pub;
+	ros::Subscriber flip_sub;
+	ros::Publisher flip_pub;
+	ros::Subscriber snapshot_sub;
+	ros::Publisher snapshot_pub;
+	ros::Subscriber autoTakeoff_sub;
+	ros::Publisher autoTakeoff_pub;
+	ros::Subscriber toggleCam_sub;
+	ros::Publisher toggleCam_pub;
+	ros::ServiceClient togglePilotMode_srv;
+	std_srvs::Empty togglePilotMode_srv_srvs;
 
 	ros::NodeHandle nh_;
 
 	// counters for Hz
 	unsigned int dronePoseCount;
 	unsigned int velCount;
-	unsigned int navdataCount;
+	unsigned int odomCount;
 	unsigned int joyCount;
 	unsigned int velCount100ms;
 
@@ -98,20 +126,23 @@ public:
 
 	tum_ardrone_gui* gui;
 
-
 	// callbacks
-	void droneposeCb(const tum_ardrone::filter_stateConstPtr statePtr);
-	void comCb(const std_msgs::StringConstPtr str);
-	void velCb(const geometry_msgs::TwistConstPtr vel);
-	void navdataCb(const ardrone_autonomy::NavdataConstPtr navdataPtr);
+	void droneposeCb(const nav_msgs::OdometryConstPtr statePtr);
+	void odomCb(const nav_msgs::OdometryConstPtr odomPtr);
 	void joyCb(const sensor_msgs::JoyConstPtr joy_msg);
-	void landCb(std_msgs::EmptyConstPtr);
-	void toggleStateCb(std_msgs::EmptyConstPtr);
+	void velCb(const geometry_msgs::TwistConstPtr vel);
+	void comCb(const std_msgs::StringConstPtr str);
 	void takeoffCb(std_msgs::EmptyConstPtr);
-	ControlCommand lastJoyControlSent;
-	bool lastL1Pressed;
-	bool lastR1Pressed;
+	void landCb(std_msgs::EmptyConstPtr);
+	//void togglepilotmodeCb(std_msgs::EmptyConstPtr);
+	void togglecamCb(std_msgs::EmptyConstPtr);
+	void flattrimCb(std_msgs::EmptyConstPtr);
+	void resetCb(std_msgs::EmptyConstPtr);
+	void flipCb(std_msgs::UInt8ConstPtr);
+	void snapshotCb(std_msgs::EmptyConstPtr);
+	void autotakeoffCb(std_msgs::EmptyConstPtr);
 
+	ControlCommand lastJoyControlSent;
 
 	// send command functions. can be called from any thread & are thread-safe.
 	// writes a string message to "/tum_ardrone/com".
@@ -120,9 +151,13 @@ public:
 	void sendControlToDrone(ControlCommand cmd);
 	void sendLand();
 	void sendTakeoff();
-	void sendToggleState();
+	void sendTogglePilotMode();
 	void sendToggleCam();
 	void sendFlattrim();
+	void sendReset();
+	void sendFlip(int flip);
+	void sendSnapshot();
+	void sendAutoTakeoff();
 };
 
 #endif /* __ROSTHREAD_H */

@@ -21,21 +21,30 @@
 #ifndef __ESTIMATIONNODE_H
 #define __ESTIMATIONNODE_H
  
-
 #include "ros/ros.h"
+#include "ros/package.h"
+#include <dynamic_reconfigure/server.h>
+#include "std_msgs/Empty.h"
+#include "std_msgs/String.h"
 #include "geometry_msgs/Twist.h"
+#include "nav_msgs/Odometry.h"
 #include "sensor_msgs/Image.h"
+#include "std_srvs/Empty.h"
 #include "tf/tfMessage.h"
 #include "tf/transform_listener.h"
 #include "tf/transform_broadcaster.h"
-#include "std_msgs/Empty.h"
 #include "std_srvs/Empty.h"
-#include "ardrone_autonomy/Navdata.h"
-#include "tum_ardrone/filter_state.h"
-#include "std_msgs/String.h"
-#include <dynamic_reconfigure/server.h>
+#include "../HelperFunctions.h"
+#include "DroneKalmanFilter.h"
+#include "PTAMWrapper.h"
+#include "MapView.h"
+#include "tum_ardrone/drone_state.h"
+#include "tum_ardrone/ptam_state.h"
 #include "tum_ardrone/StateestimationParamsConfig.h"
 #include "TooN/se3.h"
+#include "deque"
+#include <sys/stat.h>
+#include <string>
 
 
 class DroneKalmanFilter;
@@ -46,21 +55,22 @@ struct EstimationNode
 {
 private:
 	// comm with drone
-	ros::Subscriber navdata_sub; // drone navdata
+	ros::Subscriber odom_sub; // drone odom
 	ros::Subscriber vel_sub; // to co-read contro commands sent from other thread
 	ros::Subscriber vid_sub;
-	ros::Time lastNavStamp;
-
+	ros::Subscriber state_sub;
+	ros::Time lastOdomStamp;
 
 	// comm with ptam
 	//ros::Subscriber slam_info_sub; // ptam info (tracking quality) etc.
 	//tf::TransformListener tf_sub;
-	ros::Subscriber tum_ardrone_sub;
-	ros::Publisher tum_ardrone_pub;
+	ros::Subscriber drone_sub;
+	ros::Publisher drone_pub;
 	static pthread_mutex_t tum_ardrone_CS;
 
 	// output
 	ros::Publisher dronepose_pub;
+	ros::Publisher ptamstate_pub;
 
 	ros::NodeHandle nh_;
 
@@ -73,36 +83,28 @@ private:
 	ros::Duration predTime;
 	int publishFreq;
 
-	std::string navdata_channel;
-	std::string control_channel;
-	std::string output_channel;
-	std::string video_channel;
-	std::string command_channel;
-
-
-
-	// for navdata time-smoothing
+	// for odom time-smoothing
 	long lastDroneTS;
 	long lastRosTS;
 	long droneRosTSOffset;
 
-
-	// save last navinfo received for forwarding...
-	ardrone_autonomy::Navdata lastNavdataReceived;
+	// save last odom received for forwarding...
+	nav_msgs::Odometry lastOdomReceived;
 
 public:
 	// filter
 	DroneKalmanFilter* filter;
 	PTAMWrapper* ptamWrapper;
 	MapView* mapView;
+	std::string calibFile;
+	std::string camTopic;
 	std::string packagePath;
 
 	EstimationNode();
 	~EstimationNode();
 
-
 	// ROS message callbacks
-	void navdataCb(const ardrone_autonomy::NavdataConstPtr navdataPtr);
+	void odomCb(const nav_msgs::OdometryConstPtr odomPtr);
 	void velCb(const geometry_msgs::TwistConstPtr velPtr);
 	void vidCb(const sensor_msgs::ImageConstPtr img);
 	void comCb(const std_msgs::StringConstPtr str);
@@ -117,24 +119,6 @@ public:
 	void reSendInfo();
 
 	void publishTf(TooN::SE3<>, ros::Time stamp, int seq, std::string system);
-
-	// logging stuff
-	// logging stuff
-	std::ofstream* logfileIMU;
-	std::ofstream* logfilePTAM;
-	std::ofstream* logfileFilter;
-	std::ofstream* logfilePTAMRaw;
-	static pthread_mutex_t logIMU_CS;
-	static pthread_mutex_t logPTAM_CS;
-	static pthread_mutex_t logFilter_CS;
-	static pthread_mutex_t logPTAMRaw_CS;
-	long currentLogID;
-	long startedLogClock;
-
-	void toogleLogging();	// switches logging on or off.
-	std::string calibFile;
-	int arDroneVersion;
-
 
 };
 #endif /* __ESTIMATIONNODE_H */

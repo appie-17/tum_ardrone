@@ -37,7 +37,7 @@ private:
 public:
 	KIAutoInit(bool resetMap = true, int imoveTimeMS=500, int iwaitTimeMS=800, int reachHeightMS=6000, float controlMult = 1.0, bool takeoff=true);
 	~KIAutoInit(void);
-	bool update(const tum_ardrone::filter_stateConstPtr statePtr);
+	bool update(const nav_msgs::OdometryConstPtr statePtr);
 };
 
 #endif /* __KIAUTOINIT_H */

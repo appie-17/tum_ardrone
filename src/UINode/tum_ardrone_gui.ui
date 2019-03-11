@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>629</width>
-    <height>679</height>
+    <width>750</width>
+    <height>800</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -173,7 +173,7 @@
      <string>Toggle Cam</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="buttonFlattrim">
+  <widget class="QPushButton" name="buttonFlattrim">
     <property name="geometry">
      <rect>
       <x>260</x>
@@ -185,14 +185,14 @@
     <property name="text">
      <string>FlatTrim</string>
     </property>
-   </widget>
+</widget>
   </widget>
   <widget class="QGroupBox" name="groupBox_2">
    <property name="geometry">
     <rect>
      <x>350</x>
      <y>10</y>
-     <width>251</width>
+     <width>371</width>
      <height>141</height>
     </rect>
    </property>
@@ -256,7 +256,7 @@
      <rect>
       <x>0</x>
       <y>92</y>
-      <width>261</width>
+      <width>361</width>
       <height>17</height>
      </rect>
     </property>
@@ -283,8 +283,8 @@
     <rect>
      <x>350</x>
      <y>140</y>
-     <width>271</width>
-     <height>131</height>
+     <width>400</width>
+     <height>400</height>
     </rect>
    </property>
    <property name="title">
@@ -298,8 +298,8 @@
      <rect>
       <x>0</x>
       <y>20</y>
-      <width>271</width>
-      <height>111</height>
+      <width>350</width>
+      <height>135</height>
      </rect>
     </property>
     <property name="font">
@@ -325,9 +325,9 @@
    <property name="geometry">
     <rect>
      <x>350</x>
-     <y>270</y>
-     <width>271</width>
-     <height>121</height>
+     <y>300</y>
+     <width>371</width>
+     <height>321</height>
     </rect>
    </property>
    <property name="title">
@@ -338,8 +338,8 @@
      <rect>
       <x>0</x>
       <y>20</y>
-      <width>271</width>
-      <height>101</height>
+      <width>350</width>
+      <height>135</height>
      </rect>
     </property>
     <property name="font">
@@ -365,9 +365,9 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>470</y>
+     <y>530</y>
      <width>611</width>
-     <height>201</height>
+     <height>401</height>
     </rect>
    </property>
    <property name="title">
@@ -377,7 +377,7 @@
     <property name="geometry">
      <rect>
       <x>0</x>
-      <y>20</y>
+      <y>50</y>
       <width>611</width>
       <height>181</height>
      </rect>
@@ -396,9 +396,9 @@
    <property name="geometry">
     <rect>
      <x>350</x>
-     <y>390</y>
+     <y>470</y>
      <width>271</width>
-     <height>111</height>
+     <height>141</height>
     </rect>
    </property>
    <property name="title">
@@ -488,7 +488,7 @@
      <string>Ping Drone (every 1s)</string>
     </property>
     <property name="checked">
-     <bool>true</bool>
+     <bool>false</bool>
     </property>
    </widget>
   </widget>

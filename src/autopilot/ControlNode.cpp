@@ -17,17 +17,14 @@
  *  You should have received a copy of the GNU General Public License
  *  along with tum_ardrone.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
- 
- 
+
 #include "ControlNode.h"
 #include "ros/ros.h"
+#include "ros/package.h"
 #include "ros/callback_queue.h"
-#include <ros/package.h>
 
 #include "geometry_msgs/Twist.h"
 #include "../HelperFunctions.h"
-#include "tum_ardrone/filter_state.h"
 #include "std_msgs/String.h"
 #include <sys/stat.h>
 #include <string>
@@ -43,15 +40,16 @@ using namespace std;
 
 pthread_mutex_t ControlNode::logControl_CS = PTHREAD_MUTEX_INITIALIZER;
 
-
 ControlNode::ControlNode()
 {
     control_channel = nh_.resolveName("cmd_vel");
-    dronepose_channel = nh_.resolveName("ardrone/predictedPose");
-    command_channel = nh_.resolveName("tum_ardrone/com");
-    takeoff_channel = nh_.resolveName("ardrone/takeoff");
-    land_channel = nh_.resolveName("ardrone/land");
-    toggleState_channel = nh_.resolveName("ardrone/reset");
+ 	dronestate_channel = nh_.resolveName("droneState");
+    dronepose_channel = nh_.resolveName("predictedPose");
+    ptamstate_channel = nh_.resolveName("ptamState");
+    command_channel = nh_.resolveName("com");
+    takeoff_channel = nh_.resolveName("takeoff");
+    land_channel = nh_.resolveName("land");
+    toggleState_channel = nh_.resolveName("reset");
 
 	packagePath = ros::package::getPath("tum_ardrone");
 
@@ -63,9 +61,8 @@ ControlNode::ControlNode()
 		sscanf(val.c_str(), "%f", &valFloat);
 	else
 		valFloat = 110;
-	minPublishFreq = valFloat;
-	cout << "set minPublishFreq to " << valFloat << "ms"<< endl;
 
+	minPublishFreq = 60;//valFloat;
 
 	// other internal vars
 	logfileControl = 0;
@@ -73,10 +70,14 @@ ControlNode::ControlNode()
 	lastControlSentMS = 0;
 
 	// channels
-	dronepose_sub = nh_.subscribe(dronepose_channel, 10, &ControlNode::droneposeCb, this);
+
+	dronepose_sub = nh_.subscribe(dronepose_channel, 100, &ControlNode::droneposeCb, this);
+	ptamstate_sub = nh_.subscribe(ptamstate_channel, 10, &ControlNode::ptamstateCb, this);
 	vel_pub	   = nh_.advertise<geometry_msgs::Twist>(control_channel,1);
-	tum_ardrone_pub	   = nh_.advertise<std_msgs::String>(command_channel,50);
-	tum_ardrone_sub	   = nh_.subscribe(command_channel,50, &ControlNode::comCb, this);
+
+	drone_pub	   = nh_.advertise<std_msgs::String>(command_channel,50);
+	drone_sub	   = nh_.subscribe(command_channel,50, &ControlNode::comCb, this);
+
 	takeoff_pub	   = nh_.advertise<std_msgs::Empty>(takeoff_channel,1);
 	land_pub	   = nh_.advertise<std_msgs::Empty>(land_channel,1);
 	toggleState_pub	   = nh_.advertise<std_msgs::Empty>(toggleState_channel,1);
@@ -114,7 +115,25 @@ ControlNode::~ControlNode()
 }
 
 pthread_mutex_t ControlNode::commandQueue_CS = PTHREAD_MUTEX_INITIALIZER;
-void ControlNode::droneposeCb(const tum_ardrone::filter_stateConstPtr statePtr)
+
+void ControlNode::ptamstateCb(const tum_ardrone::ptam_stateConstPtr statePtr)
+{
+	//Update dronestate
+	controller.state_PTAM = statePtr->state;
+	controller.state_PTAM_scale = statePtr->scale;
+	controller.state_PTAM_scaleAccuracy = statePtr->scaleAccuracy;
+/*
+	# constants corresponding to PTAM state
+	uint32 PTAM_IDLE = 0           # PTAM not running.
+	uint32 PTAM_INITIALIZING = 1   # initialization (trails)
+	uint32 PTAM_LOST = 2           # ptam is running, but lost
+	uint32 PTAM_GOOD = 3           # tracking quality OK
+	uint32 PTAM_BEST = 4           # tracking quality best
+	uint32 PTAM_TOOKKF = 5         # just took a new KF (equivalent to PTAM_BEST)
+	uint32 PTAM_FALSEPOSITIVE = 6  # ptam thinks it is good, but its estimate is rejected.
+*/
+}
+void ControlNode::droneposeCb(const nav_msgs::OdometryConstPtr statePtr)
 {
 	// do controlling
 	pthread_mutex_lock(&commandQueue_CS);
@@ -136,14 +155,19 @@ void ControlNode::droneposeCb(const tum_ardrone::filter_stateConstPtr statePtr)
 		ROS_DEBUG("Autopilot is Controlling, but there is no KI -> sending HOVER");
 	}
 
-
 	pthread_mutex_unlock(&commandQueue_CS);
 }
 
 // pops next command(s) from queue (until one is found thats not "done" yet).
 // assumes propery of command queue lock exists (!)
-void ControlNode::popNextCommand(const tum_ardrone::filter_stateConstPtr statePtr)
-{
+void ControlNode::popNextCommand(const nav_msgs::OdometryConstPtr statePtr)
+{	
+	double state_roll, state_pitch, state_yaw;
+	q2rpy(TooN::makeVector(statePtr->pose.pose.orientation.x,
+						   statePtr->pose.pose.orientation.y,
+						   statePtr->pose.pose.orientation.z,
+						   statePtr->pose.pose.orientation.w), &state_roll, &state_pitch, &state_yaw);
+						   
 	// should actually not happen., but to make shure:
 	// delete existing KI.
 	if(currentKI != NULL)
@@ -169,7 +193,7 @@ void ControlNode::popNextCommand(const tum_ardrone::filter_stateConstPtr statePt
 		// replace macros
 		if((p = command.find("$POSE$")) != std::string::npos)
 		{
-			snprintf(buf,100, "%.3f %.3f %.3f %.3f",statePtr->x,statePtr->y,statePtr->z,statePtr->yaw);
+			snprintf(buf,100, "%.3f %.3f %.3f %.3f",statePtr->pose.pose.position.x,statePtr->pose.pose.position.y,statePtr->pose.pose.position.z,state_yaw);
 			command.replace(p,6,buf);
 		}
 		if((p = command.find("$REFERENCE$")) != std::string::npos)
@@ -276,8 +300,8 @@ void ControlNode::popNextCommand(const tum_ardrone::filter_stateConstPtr statePt
 		{
 			currentKI = new KIFlyTo(
 				DronePosition(
-				TooN::makeVector(parameters[0]+statePtr->x,parameters[1]+statePtr->y,parameters[2]+statePtr->z),
-					parameters[3] + statePtr->yaw),
+				TooN::makeVector(parameters[0]+statePtr->pose.pose.position.x,parameters[1]+statePtr->pose.pose.position.y,parameters[2]+statePtr->pose.pose.position.z),
+					parameters[3] + state_yaw),
 				parameter_StayTime,
 				parameter_MaxControl,
 				parameter_InitialReachDist,
@@ -288,6 +312,7 @@ void ControlNode::popNextCommand(const tum_ardrone::filter_stateConstPtr statePt
 
 		}
 
+	
 		// land
 		else if(command == "land")
 		{
@@ -364,7 +389,7 @@ void ControlNode::Loop()
 			ROS_WARN("Autopilot enabled, but no estimated pose received - sending HOVER.");
 		}
 
-		// -------------- 2. update info. ---------------
+		// -------------- 3. update info. ---------------
 		if((ros::Time::now() - lastStateUpdate) > ros::Duration(0.4))
 		{
 			reSendInfo();
@@ -395,12 +420,13 @@ void ControlNode::dynConfCb(tum_ardrone::AutopilotParamsConfig &config, uint32_t
 }
 
 pthread_mutex_t ControlNode::tum_ardrone_CS = PTHREAD_MUTEX_INITIALIZER;
+
 void ControlNode::publishCommand(std::string c)
 {
 	std_msgs::String s;
 	s.data = c.c_str();
 	pthread_mutex_lock(&tum_ardrone_CS);
-	tum_ardrone_pub.publish(s);
+	drone_pub.publish(s);
 	pthread_mutex_unlock(&tum_ardrone_CS);
 }
 
@@ -413,10 +439,10 @@ void ControlNode::toogleLogging()
 void ControlNode::sendControlToDrone(ControlCommand cmd)
 {
 	geometry_msgs::Twist cmdT;
-	cmdT.angular.z = -cmd.yaw;
+	cmdT.angular.z = cmd.yaw;
 	cmdT.linear.z = cmd.gaz;
-	cmdT.linear.x = -cmd.pitch;
-	cmdT.linear.y = -cmd.roll;
+	cmdT.linear.y = cmd.pitch;
+	cmdT.linear.x = cmd.roll;
 
 	// assume that while actively controlling, the above for will never be equal to zero, so i will never hover.
 	cmdT.angular.x = cmdT.angular.y = 0;
@@ -482,7 +508,7 @@ void ControlNode::stopControl() {
 	ROS_INFO("STOP CONTROLLING!");
 }
 
-void ControlNode::updateControl(const tum_ardrone::filter_stateConstPtr statePtr) {
+void ControlNode::updateControl(const nav_msgs::OdometryConstPtr statePtr) {
 	if (currentKI->update(statePtr) && commandQueue.size() > 0) {
 		delete currentKI;
 		currentKI = NULL;

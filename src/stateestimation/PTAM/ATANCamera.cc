@@ -4,6 +4,7 @@
 #include <cvd/vector_image_ref.h>
 #include <iostream>
 #include <gvars3/instances.h>
+
 using namespace std;
 using namespace CVD;
 using namespace GVars3;

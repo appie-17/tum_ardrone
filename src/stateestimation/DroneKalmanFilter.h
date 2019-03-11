@@ -25,15 +25,17 @@
 #include <deque>
 #include <iostream>
 #include <fstream>
-#include <ardrone_autonomy/Navdata.h>
+#include <sstream>
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/TwistStamped.h>
+#include <nav_msgs/Odometry.h>
 #include <pthread.h>
 #include "../HelperFunctions.h"
-#include "tum_ardrone/filter_state.h"
+#include "tum_ardrone/drone_state.h"
+#include "EstimationNode.h"
+#include "tf/transform_datatypes.h"
 
 class EstimationNode;
-
 
 class ScaleStruct
 {
@@ -124,9 +126,7 @@ public:
 		tmp(0,0) -= K[0]; 
 		tmp(1,0) -= K[1];
 		var = tmp * var;
-
 	}
-
 
 	inline void observeSpeed(double obs, double obsVar)
 	{
@@ -144,7 +144,6 @@ public:
 		var = tmp * var;
 	}
 
-
 	// predict
 	// calculates prediction variance matrix based on gaussian acceleration as error.
 	inline void predict(double ms, double accelerationVar, TooN::Vector<2> controlGains = TooN::makeVector(0,0), double coVarFac = 1, double speedVarFac = 1)
@@ -160,7 +159,6 @@ public:
 
 		TooN::Matrix<2,2> G = TooN::Identity;
 		G(0,1) = ms;
-
 		state = G * state + controlGains;
 		var  = G * var * G.T();
 		var(0,0) += accelerationVar * 0.25 * ms*ms*ms*ms;
@@ -229,7 +227,6 @@ public:
 	}
 };
 
-
 class DroneKalmanFilter
 {
 private:
@@ -241,7 +238,6 @@ private:
 	PFilter pitch;
 	PVFilter yaw;
 
-
 	// relation parameters (ptam to imu scale / offset)
 	double x_offset, y_offset, z_offset;
 	double xy_scale, z_scale;
@@ -251,14 +247,18 @@ private:
 	bool offsets_xyz_initialized;
 	bool scale_xyz_initialized;
 
-	// intermediate values for re-estimation of relaton parameters
+	// intermediate values for re-estimation of relation parameters
 	double xyz_sum_IMUxIMU;
 	double xyz_sum_PTAMxPTAM;
 	double xyz_sum_PTAMxIMU;
 	double rp_offset_framesContributed;
 	std::vector<ScaleStruct>* scalePairs;
 
-	// parameters used for height and yaw differentiation
+	// parameters used for filtering orientations, velocities and height/yaw differentiation
+	double last_roll_IMU;
+	double last_pitch_IMU;
+	double last_y_IMU;
+	double last_x_IMU;
 	double last_yaw_IMU;
 	double last_z_IMU;
 	long last_yaw_droneTime;
@@ -272,7 +272,6 @@ private:
 	TooN::Vector<3> last_fused_pose;
 	bool lastPosesValid;
 
-
 	// statistics parameters
 	int numGoodIMUObservations;
 	int numGoodPTAMObservations;
@@ -281,18 +280,15 @@ private:
 	long lastIMU_XYZ_dronetime;
 	long lastIMU_RPY_dronetime;
 	long lastIMU_dronetime;
-	int lastIMU_XYZ_ID;
-	int lastIMU_RPY_ID;
 	double lastPredictedRoll;
 	double lastPredictedPitch;
 	double initialScaleSet;
 
 	// internal add functions
 	void predictInternal(geometry_msgs::Twist activeControlInfo, int timeSpanMicros, bool useControlGains = true);
-	void observeIMU_XYZ(const ardrone_autonomy::Navdata* nav);
-	void observeIMU_RPY(const ardrone_autonomy::Navdata* nav);
+	void observeIMU_XYZ(const nav_msgs::Odometry* odom);
+	void observeIMU_RPY(const nav_msgs::Odometry* odom);
 	void observePTAM(TooN::Vector<6> pose);
-
 
 	// internal sync functions. called on ptam-add.
 	void sync_xyz(double x_global, double y_global, double z_global);
@@ -314,9 +310,8 @@ private:
 	double lastVXGain;
 	double lastVYGain;
 
-
-
 	EstimationNode* node;
+
 public:
 	DroneKalmanFilter(EstimationNode* node);
 	~DroneKalmanFilter(void);
@@ -327,23 +322,19 @@ public:
 	static int delayVideo;	// assumed 120 (gets here 120ms later than rpy)
 	static int delayControl;	// assumed 120 (gets here 120ms later than rpy)
 	
-	static const int base_delayXYZ;
-	static const int base_delayVideo;
-	static const int base_delayControl;
+	static int base_delayXYZ;
+	static int base_delayVideo;
+	static int base_delayControl;
 
-	std::deque<ardrone_autonomy::Navdata>* navdataQueue;	// new navdata messages
+	std::deque<nav_msgs::Odometry>* odomQueue;	// new odometry messages
 	std::deque<geometry_msgs::TwistStamped>* velQueue;		// new velocity messages
 	static pthread_mutex_t filter_CS;
-
 
 	int predictdUpToTimestamp;
 	int scalePairsIn, scalePairsOut;
 
-
-
 	// resets everything to zero.
 	void reset();
-
 
 	// resets everything to do with PTAM to zero (call if tracking continues, but PTAM tracking is reset)
 	void clearPTAM();
@@ -356,7 +347,7 @@ public:
 
 	// gets current pose and variances (up to where predictUpTo has been called)
 	TooN::Vector<6> getCurrentPose();
-	tum_ardrone::filter_state getCurrentPoseSpeed();
+	nav_msgs::Odometry getCurrentPoseSpeed();
 	TooN::Vector<10> getCurrentPoseSpeedAsVec();
 	TooN::Vector<10> getCurrentPoseSpeedVariances();
 	TooN::Vector<6> getCurrentPoseVariances();
@@ -371,7 +362,7 @@ public:
 
 
 	// does not actually change the state of the filter.
-	// makes a compy of it, flushes all queued navdata into it, then predicts up to timestamp.
+	// makes a compy of it, flushes all queued odometry into it, then predicts up to timestamp.
 	// relatively costly (!)
 
 	// transforms a PTAM observation.
@@ -388,13 +379,11 @@ public:
 	TooN::Vector<3> scalingFixpoint;	// in PTAM's system (!)
 	bool useScalingFixpoint;
 
-	//
-	void flushScalePairs();
 	
 	// locking
 	bool allSyncLocked;
 	bool useControl;
-	bool useNavdata;
+	bool useOdom;
 	bool usePTAM;
 
 	// motion model parameters
@@ -407,14 +396,12 @@ public:
 	float c7;
 	float c8;
 
-
-
 	bool handleCommand(std::string s);
 
 	// new ROS interface functions
 	void addPTAMObservation(TooN::Vector<6> trans, int time);
 	void addFakePTAMObservation(int time);
-	tum_ardrone::filter_state getPoseAt(ros::Time t, bool useControlGains = true);
+	nav_msgs::Odometry getPoseAt(ros::Time t, bool useControlGains = true);
 	TooN::Vector<10> getPoseAtAsVec(int timestamp, bool useControlGains = true);
 
 };

@@ -123,13 +123,14 @@ void tum_ardrone_gui::ToggleCamClicked()
 {
 	rosThread->sendToggleCam();
 }
-void tum_ardrone_gui::FlattrimClicked()
+void tum_ardrone_gui::FlatTrimClicked()
 {
 	rosThread->sendFlattrim();
 }
+
 void tum_ardrone_gui::EmergencyClicked()
 {
-	rosThread->sendToggleState();
+	rosThread->sendReset();
 }
 
 void tum_ardrone_gui::ClearClicked()
@@ -393,7 +394,7 @@ void tum_ardrone_gui::keyPressEvent( QKeyEvent * key)
 
 	if(key->key() == 16777264)	// F1
 	{
-		rosThread->sendToggleState();
+		rosThread->sendReset();
 	}
 }
 
@@ -401,18 +402,18 @@ ControlCommand tum_ardrone_gui::calcKBControl()
 {
 	// clear keys that have not been refreshed for 1s, it is set to "not pressed"
 	for(int i=0;i<8;i++)
-		isPressed[i] = isPressed[i] && ((lastRepeat[i] + 1000) > getMS());
+		isPressed[i] = isPressed[i] && ((lastRepeat[i] + 500) > getMS());
 
 	ControlCommand c;
 
-	if(isPressed[0]) c.roll = -sensRP; // j
-	if(isPressed[1]) c.pitch = sensRP; // k
-	if(isPressed[2]) c.roll = sensRP; // l
-	if(isPressed[3]) c.pitch = -sensRP; // i
-	if(isPressed[4]) c.yaw = -sensYaw; // u
-	if(isPressed[5]) c.yaw = sensYaw; // o
+	if(isPressed[0]) c.roll = sensRP; // j
+	if(isPressed[1]) c.pitch = -sensRP; // k
+	if(isPressed[2]) c.roll = -sensRP; // l
+	if(isPressed[3]) c.pitch = sensRP; // i
+	if(isPressed[4]) c.yaw = sensYaw; // u
+	if(isPressed[5]) c.yaw = -sensYaw; // o
 	if(isPressed[6]) c.gaz = sensRP; // q
-	if(isPressed[7]) c.gaz = -sensRP; // a
+	if(isPressed[7]) c.gaz = sensRP; // a
 
 	return c;
 }
