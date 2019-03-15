@@ -93,19 +93,22 @@ void RosThread::joyCb(const sensor_msgs::JoyConstPtr joy_msg)
 		ControlCommand c;
 		c.yaw = joy_msg->axes[0] * -1;
 		c.gaz = joy_msg->axes[1] * 1;
-		c.pitch = joy_msg->axes[3] * -1;
-		c.roll = joy_msg->axes[4] * 1;
+		c.pitch = joy_msg->axes[4] * 1;
+		c.roll = joy_msg->axes[3] * -1;
 
 		sendControlToDrone(c);
 		lastJoyControlSent = c;
 
-        if(joy_msg->buttons.at(0) & (pressedZero!=true))
+		//Button 6 is dead-man button
+		//Turn on autopilot
+		if(joy_msg->buttons.at(0) & (pressedZero!=true))
 		{
-			sendAutoTakeoff();
+			sendAutopilot();
 			pressedZero=true;
 		}
 		else if(!joy_msg->buttons.at(0))
 			pressedZero=false;
+		//Toggle on fpv camera			
 		if(joy_msg->buttons.at(1) & (pressedOne!=true))
 		{
 			sendToggleCam();
@@ -113,6 +116,7 @@ void RosThread::joyCb(const sensor_msgs::JoyConstPtr joy_msg)
 		}
 		else if(!joy_msg->buttons.at(1))
 			pressedOne=false;
+		//Calibrate gyroscope on flat surface (flattrim)
         if(joy_msg->buttons.at(2) & (pressedTwo!=true))
         {
 			sendFlattrim();
@@ -120,6 +124,7 @@ void RosThread::joyCb(const sensor_msgs::JoyConstPtr joy_msg)
 		}
 		else if(!joy_msg->buttons.at(2))
 			pressedTwo=false;			
+		//Toggle piloting-mode (easy, medium, hard)
         if(joy_msg->buttons.at(3) & (pressedThree!=true))
         {
 			sendTogglePilotMode();
@@ -127,6 +132,7 @@ void RosThread::joyCb(const sensor_msgs::JoyConstPtr joy_msg)
 		}
 		else if(!joy_msg->buttons.at(3))
 			pressedThree=false;
+		//Takeoff
         if(joy_msg->buttons.at(4) & (pressedFour!=true))
         {
 			sendTakeoff();	
@@ -134,6 +140,7 @@ void RosThread::joyCb(const sensor_msgs::JoyConstPtr joy_msg)
 		}
 		else if(!joy_msg->buttons.at(4))
 			pressedFour=false;
+		//Land
         if(joy_msg->buttons.at(5) & (pressedFive!=true))
         {
 			sendLand();
@@ -141,48 +148,70 @@ void RosThread::joyCb(const sensor_msgs::JoyConstPtr joy_msg)
 		}
 		else if(!joy_msg->buttons.at(5))
 			pressedFive=false;
-        if(joy_msg->buttons.at(6) & (pressedSix!=true))
-        {
-			sendSnapshot();
-			pressedSix=true;
-		}
-		else if(!joy_msg->buttons.at(6))
-			pressedSix=false;
+		//Emergency
         if(joy_msg->buttons.at(7) & (pressedSeven!=true))
         {
-			sendReset();
+			sendEmergency();
 			pressedSeven=true;
 		}
 		else if(!joy_msg->buttons.at(7))
 			pressedSeven=false;
-        if(joy_msg->buttons.at(13) & (pressedThirteen!=true))
-        {
-			sendFlip(1);
+		//Auto-takeoff
+        if((joy_msg->buttons.at(13) & (pressedThirteen!=true)) & !((joy_msg->buttons.at(6) & (pressedSix!=true)))) 
+		{
+			sendAutoTakeoff();
 			pressedThirteen=true;
 		}
 		else if(!joy_msg->buttons.at(13))
-			pressedThirteen=false;
-        if(joy_msg->buttons.at(14) & (pressedFourteen!=true))
+			pressedThirteen=false;        
+        //Snapshot downwards
+        if((joy_msg->buttons.at(14) & (pressedFourteen!=true)) & !((joy_msg->buttons.at(6) & (pressedSix!=true)))) 
         {
-			sendFlip(2);
+			sendSnapshot();
 			pressedFourteen=true;
 		}
 		else if(!joy_msg->buttons.at(14))
-			pressedFourteen=false;
-        if(joy_msg->buttons.at(15) & (pressedFifteen!=true))
+			pressedFourteen=false;			
+		//Front-flip
+        if((joy_msg->buttons.at(13) & (pressedThirteen!=true)) & ((joy_msg->buttons.at(6) & (pressedSix!=true))))
         {
-			sendFlip(3);
+			sendFlip(1);
+			pressedThirteen=true;
+			pressedSix=true;
+		}
+		else if(!joy_msg->buttons.at(13))
+			pressedThirteen=false;
+			pressedSix=false;
+		//..-flip
+        if((joy_msg->buttons.at(14) & (pressedFourteen!=true)) & ((joy_msg->buttons.at(6) & (pressedSix!=true))))
+        {
+			sendFlip(2);
+			pressedFourteen=true;
+			pressedSix=true;
+		}
+		else if(!joy_msg->buttons.at(14))
+			pressedFourteen=false;
+			pressedSix=false;			
+		//..-flip
+        if((joy_msg->buttons.at(15) & (pressedFifteen!=true)) & ((joy_msg->buttons.at(6) & (pressedSix!=true))))
+        {
+			sendFlip(4);
 			pressedFifteen=true;
+			pressedSix=true;
 		}
 		else if(!joy_msg->buttons.at(15))
 			pressedFifteen=false;
-        if(joy_msg->buttons.at(16) & (pressedSixteen!=true))
+			pressedSix=false;			
+		//..-flip
+        if((joy_msg->buttons.at(16) & (pressedSixteen!=true)) & ((joy_msg->buttons.at(6) & (pressedSix!=true))))
         {
-			sendFlip(4);		
+			sendFlip(3);		
 			pressedSixteen=true;
+			pressedSix=true;
 		}
 		else if(!joy_msg->buttons.at(16))
-			pressedSixteen=false;	
+			pressedSixteen=false;
+			pressedSix=false;	
 	}
 }
 
@@ -208,6 +237,12 @@ void RosThread::comCb(const std_msgs::StringConstPtr str)
 	}
 }
 
+void RosThread::autopilotCb(std_msgs::EmptyConstPtr)
+{
+	gui->setControlSource(CONTROL_AUTO);
+	gui->addLogLine("sent: AutoPilotOn");
+}
+
 void RosThread::takeoffCb(std_msgs::EmptyConstPtr)
 {
 	gui->addLogLine("sent: Takeoff");
@@ -216,6 +251,12 @@ void RosThread::landCb(std_msgs::EmptyConstPtr)
 {
 	gui->addLogLine("sent: Land");
 }
+
+void RosThread::togglepilotmodeCb(std_msgs::EmptyConstPtr)
+{
+	gui->addLogLine("sent: Toggle pilotmode");
+}
+
 void RosThread::togglecamCb(std_msgs::EmptyConstPtr)
 {
 	gui->addLogLine("sent: Camera turned on");
@@ -228,7 +269,7 @@ void RosThread::flipCb(std_msgs::UInt8ConstPtr)
 {
 	gui->addLogLine("sent: Execute Flip");
 }
-void RosThread::resetCb(std_msgs::EmptyConstPtr)
+void RosThread::emergencyCb(std_msgs::EmptyConstPtr)
 {
 	gui->addLogLine("sent: Emergency Reset");
 }
@@ -250,19 +291,22 @@ void RosThread::run()
     vel_pub	= nh_.advertise<geometry_msgs::Twist>(nh_.resolveName("cmd_vel"),50);
 	comDrone_sub = nh_.subscribe(nh_.resolveName("com"),50, &RosThread::comCb, this);
 	comDrone_pub = nh_.advertise<std_msgs::String>(nh_.resolveName("com"),50);
+    autopilot_sub = nh_.subscribe(nh_.resolveName("autopilot"),1, &RosThread::autopilotCb, this);
+    autopilot_pub = nh_.advertise<std_msgs::Empty>(nh_.resolveName("autopilot"),1);
     takeoff_sub = nh_.subscribe(nh_.resolveName("takeoff"),1, &RosThread::takeoffCb, this);
     takeoff_pub = nh_.advertise<std_msgs::Empty>(nh_.resolveName("takeoff"),1);
     land_sub = nh_.subscribe(nh_.resolveName("land"),1, &RosThread::landCb, this);
     land_pub = nh_.advertise<std_msgs::Empty>(nh_.resolveName("land"),1);
-	reset_sub = nh_.subscribe(nh_.resolveName("reset"),1, &RosThread::resetCb, this);
-	reset_pub = nh_.advertise<std_msgs::Empty>(nh_.resolveName("reset"),1);
+	emergency_sub = nh_.subscribe(nh_.resolveName("emergency"),1, &RosThread::emergencyCb, this);
+	emergency_pub = nh_.advertise<std_msgs::Empty>(nh_.resolveName("emergency"),1);
 	flip_sub = nh_.subscribe(nh_.resolveName("flip"), 1, &RosThread::flipCb, this);
 	flip_pub = nh_.advertise<std_msgs::UInt8>(nh_.resolveName("flip"),1);
 	autoTakeoff_sub = nh_.subscribe(nh_.resolveName("auto_takeoff"), 1, &RosThread::autotakeoffCb, this);
 	autoTakeoff_pub = nh_.advertise<std_msgs::Empty>(nh_.resolveName("auto_takeoff"),1);
 	snapshot_sub = nh_.subscribe(nh_.resolveName("snapshot"), 1, &RosThread::snapshotCb, this);
 	snapshot_pub = nh_.advertise<std_msgs::Empty>(nh_.resolveName("snapshot"),1);
-	togglePilotMode_srv = nh_.serviceClient<std_srvs::Empty>(nh_.resolveName("pilot_mode"));
+	togglePilotMode_sub = nh_.subscribe(nh_.resolveName("pilot_mode"), 1, &RosThread::togglepilotmodeCb, this);
+	togglePilotMode_pub = nh_.advertise<std_msgs::Empty>(nh_.resolveName("pilot_mode"), 1);
 	toggleCam_sub = nh_.subscribe(nh_.resolveName("toggle_cam"),1, &RosThread::togglecamCb, this);
     toggleCam_pub = nh_.advertise<std_msgs::Empty>(nh_.resolveName("toggle_cam"),1);
 	flattrim_sub = nh_.subscribe(nh_.resolveName("flattrim"),1, &RosThread::flattrimCb, this);
@@ -337,6 +381,14 @@ void RosThread::sendControlToDrone(ControlCommand cmd)
 	pthread_mutex_unlock(&send_CS);
 }
 
+void RosThread::sendAutopilot()
+{
+	pthread_mutex_lock(&send_CS);
+	autopilot_pub.publish(std_msgs::Empty());
+	pthread_mutex_unlock(&send_CS);
+}
+
+
 void RosThread::sendLand()
 {
 	pthread_mutex_lock(&send_CS);
@@ -351,10 +403,9 @@ void RosThread::sendTakeoff()
 }
 
 void RosThread::sendTogglePilotMode()
-{
-	gui->addLogLine("sent: Toggle pilotmode");
+{	
 	pthread_mutex_lock(&send_CS);
-	togglePilotMode_srv.call(togglePilotMode_srv_srvs);
+	togglePilotMode_pub.publish(std_msgs::Empty());
 	pthread_mutex_unlock(&send_CS);
 }
 void RosThread::sendToggleCam()
@@ -369,10 +420,10 @@ void RosThread::sendFlattrim()
 	flattrim_pub.publish(std_msgs::Empty());
 	pthread_mutex_unlock(&send_CS);
 }
-void RosThread::sendReset()
+void RosThread::sendEmergency()
 {
 	pthread_mutex_lock(&send_CS);
-	reset_pub.publish(std_msgs::Empty());
+	emergency_pub.publish(std_msgs::Empty());
 	pthread_mutex_unlock(&send_CS);
 }
 void RosThread::sendFlip(int flip)

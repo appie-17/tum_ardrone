@@ -130,7 +130,7 @@ void tum_ardrone_gui::FlatTrimClicked()
 
 void tum_ardrone_gui::EmergencyClicked()
 {
-	rosThread->sendReset();
+	rosThread->sendEmergency();
 }
 
 void tum_ardrone_gui::ClearClicked()
@@ -394,7 +394,7 @@ void tum_ardrone_gui::keyPressEvent( QKeyEvent * key)
 
 	if(key->key() == 16777264)	// F1
 	{
-		rosThread->sendReset();
+		rosThread->sendEmergency();
 	}
 }
 
@@ -413,7 +413,7 @@ ControlCommand tum_ardrone_gui::calcKBControl()
 	if(isPressed[4]) c.yaw = sensYaw; // u
 	if(isPressed[5]) c.yaw = -sensYaw; // o
 	if(isPressed[6]) c.gaz = sensRP; // q
-	if(isPressed[7]) c.gaz = sensRP; // a
+	if(isPressed[7]) c.gaz = -sensRP; // a
 
 	return c;
 }

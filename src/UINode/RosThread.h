@@ -32,8 +32,6 @@
 #include "sensor_msgs/Joy.h"
 #include "geometry_msgs/Twist.h"
 #include "nav_msgs/Odometry.h"
-#include "std_srvs/Empty.h"
-#include "std_srvs/SetBool.h"
 #include "std_msgs/UInt8.h"
 #include "std_msgs/Empty.h"
 #include "std_msgs/String.h"
@@ -86,24 +84,26 @@ private:
 	ros::Publisher vel_pub;
 	ros::Subscriber comDrone_sub;
 	ros::Publisher comDrone_pub;
+	ros::Subscriber autopilot_sub;
+	ros::Publisher autopilot_pub;
 	ros::Subscriber takeoff_sub;
 	ros::Publisher takeoff_pub;
 	ros::Subscriber land_sub;
 	ros::Publisher land_pub;
 	ros::Subscriber flattrim_sub;
 	ros::Publisher flattrim_pub;
-	ros::Subscriber reset_sub;
-	ros::Publisher reset_pub;
+	ros::Subscriber emergency_sub;
+	ros::Publisher emergency_pub;
 	ros::Subscriber flip_sub;
 	ros::Publisher flip_pub;
 	ros::Subscriber snapshot_sub;
 	ros::Publisher snapshot_pub;
 	ros::Subscriber autoTakeoff_sub;
 	ros::Publisher autoTakeoff_pub;
+	ros::Subscriber togglePilotMode_sub;
+	ros::Publisher togglePilotMode_pub;
 	ros::Subscriber toggleCam_sub;
 	ros::Publisher toggleCam_pub;
-	ros::ServiceClient togglePilotMode_srv;
-	std_srvs::Empty togglePilotMode_srv_srvs;
 
 	ros::NodeHandle nh_;
 
@@ -132,12 +132,13 @@ public:
 	void joyCb(const sensor_msgs::JoyConstPtr joy_msg);
 	void velCb(const geometry_msgs::TwistConstPtr vel);
 	void comCb(const std_msgs::StringConstPtr str);
+	void autopilotCb(std_msgs::EmptyConstPtr);
 	void takeoffCb(std_msgs::EmptyConstPtr);
 	void landCb(std_msgs::EmptyConstPtr);
-	//void togglepilotmodeCb(std_msgs::EmptyConstPtr);
+	void togglepilotmodeCb(std_msgs::EmptyConstPtr);
 	void togglecamCb(std_msgs::EmptyConstPtr);
 	void flattrimCb(std_msgs::EmptyConstPtr);
-	void resetCb(std_msgs::EmptyConstPtr);
+	void emergencyCb(std_msgs::EmptyConstPtr);
 	void flipCb(std_msgs::UInt8ConstPtr);
 	void snapshotCb(std_msgs::EmptyConstPtr);
 	void autotakeoffCb(std_msgs::EmptyConstPtr);
@@ -149,12 +150,13 @@ public:
 	// is thread-safe (can be called by any thread, but may block till other calling thread finishes)
 	void publishCommand(std::string c);
 	void sendControlToDrone(ControlCommand cmd);
-	void sendLand();
+	void sendAutopilot();
 	void sendTakeoff();
+	void sendLand();
 	void sendTogglePilotMode();
 	void sendToggleCam();
 	void sendFlattrim();
-	void sendReset();
+	void sendEmergency();
 	void sendFlip(int flip);
 	void sendSnapshot();
 	void sendAutoTakeoff();
