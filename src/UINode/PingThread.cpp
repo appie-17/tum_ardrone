@@ -62,6 +62,7 @@ double parsePingResult(std::string s)
 	int pos = s.find("time=");
 	int found = 0;
 	float ms;
+
 	if(pos != std::string::npos)
 		found = sscanf(s.substr(pos).c_str(),"time=%f",&ms);
 
@@ -94,13 +95,18 @@ void PingThread::run()
 			r.sleep();
 			if(!keepRunning) break;
 			r.sleep();
-			if(!keepRunning) break;
+			if(!keepRunning) break;			
 
 			p = popen(pingCommand20000,"r");
 			fgets(line2, 200, p);
 			fgets(line2, 200, p);
 			pclose(p);
-
+			
+			r.sleep();
+			if(!keepRunning) break;
+			r.sleep();
+			if(!keepRunning) break;
+			
 			// parse results which should be in line1 and line2
 			double res500 = parsePingResult(line1);
 			double res20000 = parsePingResult(line2);

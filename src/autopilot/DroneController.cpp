@@ -179,8 +179,8 @@ void DroneController::calcControl(TooN::Vector<4> new_err, TooN::Vector<4> d_err
 	double cX_i = Ki_rp * i_term[0];
 	double cY_i = Ki_rp * i_term[1];
 
-	lastSentControl.pitch = cX_p + cX_d + cX_i;
-	lastSentControl.roll = cY_p + cY_d + cY_i;
+	lastSentControl.pitch = cY_p + cY_d + cY_i;
+	lastSentControl.roll = cX_p + cX_d + cX_i;
 
 	// clip
 	lastSentControl.pitch = std::min(max_rp,std::max(-max_rp,(double)(lastSentControl.pitch*agr)));
