@@ -188,9 +188,9 @@ void DroneKalmanFilter::predictInternal(geometry_msgs::Twist activeControlInfo, 
 	double tsSeconds = tsMillis / 1000.0;	// in seconds
 
 	// predict roll, pitch, yaw
-	float rollControlGain = tsSeconds*c3*(c4 * max(-0.5, min(0.5, -(double)activeControlInfo.linear.x)) - roll.state);
-	float pitchControlGain = tsSeconds*c3*(c4 * min(0.5, max(-0.5, -(double)activeControlInfo.linear.y)) - pitch.state);
-	float yawSpeedControlGain = tsSeconds*c5*(c6 * -activeControlInfo.angular.z - yaw.state[1]);	// at adaption to ros, this has to be reverted for some reason....
+	float rollControlGain = tsSeconds*c3*(c4 * max(-0.5, min(0.5, (double)activeControlInfo.linear.x)) - roll.state);
+	float pitchControlGain = tsSeconds*c3*(c4 * min(0.5, max(-0.5, (double)-activeControlInfo.linear.y)) - pitch.state);
+	float yawSpeedControlGain = tsSeconds*c5*(c6 * activeControlInfo.angular.z - yaw.state[1]);	// at adaption to ros, this has to be reverted for some reason....
 	
 	double yawRad = yaw.state[0] * 3.14159268 / 180;
 	double rollRad = roll.state * 3.14159268 / 180;

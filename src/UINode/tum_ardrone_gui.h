@@ -51,7 +51,7 @@ public slots:
 	void FlatTrimClicked();
 
 	void LoadFileChanged(QString val);
-	void ToggledUseHovering(int val);
+
 	void ToggledPingDrone(int val);
 
 	void ControlSourceChanged();
@@ -101,7 +101,6 @@ public:
     ControlCommand calcKBControl();
     ControlSource currentControlSource;
     double sensGaz, sensYaw, sensRP;
-    bool useHovering;
 
 protected:
 

@@ -459,22 +459,6 @@
      <bool>true</bool>
     </property>
    </widget>
-   <widget class="QCheckBox" name="checkBoxUseOnboardHovering">
-    <property name="geometry">
-     <rect>
-      <x>0</x>
-      <y>60</y>
-      <width>211</width>
-      <height>22</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Use Onboard Hovering</string>
-    </property>
-    <property name="checked">
-     <bool>true</bool>
-    </property>
-   </widget>
    <widget class="QCheckBox" name="checkBoxPingDrone">
     <property name="geometry">
      <rect>

@@ -374,8 +374,6 @@ void RosThread::sendControlToDrone(ControlCommand cmd)
 	cmdT.linear.y = cmd.pitch;
 	cmdT.linear.x = cmd.roll;
 
-	cmdT.angular.x = cmdT.angular.y = gui->useHovering ? 0 : 1;
-
 	pthread_mutex_lock(&send_CS);
 	vel_pub.publish(cmdT);
 	pthread_mutex_unlock(&send_CS);

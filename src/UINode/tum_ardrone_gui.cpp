@@ -61,7 +61,6 @@ tum_ardrone_gui::tum_ardrone_gui(QWidget *parent)
 	rosThread = NULL;
 	sensGaz = sensYaw = sensRP = 1;
 	currentControlSource = CONTROL_NONE;
-	useHovering = true;
 
 	for(int i=0;i<8;i++)
 	{
@@ -184,10 +183,6 @@ void tum_ardrone_gui::LoadFileChanged(QString val)
 
 		ui.plainTextEditSendCommand->setPlainText(buffer.c_str());
 	}
-}
-void tum_ardrone_gui::ToggledUseHovering(int val)
-{
-	useHovering = (val != 0);
 }
 
 void tum_ardrone_gui::ToggledPingDrone(int val)
