@@ -775,20 +775,6 @@ nav_msgs::Odometry DroneKalmanFilter::getCurrentPoseSpeed()
 	s.twist.twist.linear.y = y.state[1];
 	s.twist.twist.linear.z = z.state[1];
 	s.twist.twist.angular.z = yaw.state[1];
-		
-/* 	tum_ardrone::filter_state s;
-	s.x = x.state[0];
-	s.y = y.state[0];
-	s.z = z.state[0];
-	s.yaw = yaw.state[0];
-	s.dx = x.state[1];
-	s.dy = y.state[1];
-	s.dz = z.state[1];
-	s.dyaw = yaw.state[1];
-	s.roll = roll.state;
-	s.pitch = pitch.state;
-*/
-	
 
 	if(s.twist.twist.linear.x*s.twist.twist.linear.x < 0.001) s.twist.twist.linear.x = 0;
 	if(s.twist.twist.linear.y*s.twist.twist.linear.y < 0.001) s.twist.twist.linear.y = 0;

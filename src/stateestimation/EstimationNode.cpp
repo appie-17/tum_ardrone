@@ -23,20 +23,16 @@
 
 using namespace std;
 
-
 EstimationNode::EstimationNode()
 {
+	// Fetch ros parameters
 	packagePath = ros::package::getPath("tum_ardrone");
 
-	predTime = ros::Duration(0.025); // in sec
-	
-	std::string default_CalibFile = packagePath + "/camcalib/no_calib.txt";
-	ros::param::param("~calibFile", calibFile, default_CalibFile);
-	
+	ros::param::param("~calibFile", calibFile, packagePath + string("/camcalib/no_calib.txt") );
 	ros::param::param("~publishFreq", publishFreq, 30);
-	
-	std::string default_camTopic = "camera/image_raw";
-	ros::param::param("~camTopic", camTopic, default_camTopic);
+	ros::param::param("~predTime", predTime, 0.025); // in sec
+	ros::param::param("~camTopic", camTopic, string("camera/image_raw") );
+	ros::param::param("~ns", param_ns, string("") );
 
 	odom_sub		= nh_.subscribe(nh_.resolveName("odom"), 10, &EstimationNode::odomCb, this);
 	vel_sub			= nh_.subscribe(nh_.resolveName("cmd_vel"),10, &EstimationNode::velCb, this);
@@ -54,7 +50,6 @@ EstimationNode::EstimationNode()
 	filter = new DroneKalmanFilter(this);
 	ptamWrapper = new PTAMWrapper(filter, this);
 	mapView = new MapView(filter, ptamWrapper, this);
-
 }
 
 EstimationNode::~EstimationNode()
@@ -63,11 +58,10 @@ EstimationNode::~EstimationNode()
 	delete mapView;
 	delete ptamWrapper;
 	delete filter;
-
 }
+
 void EstimationNode::odomCb(const nav_msgs::OdometryConstPtr odomPtr)
 {
-
 	lastOdomReceived = *odomPtr;
 	if(ros::Time::now() - lastOdomReceived.header.stamp > ros::Duration(30.0))
 		lastOdomReceived.header.stamp = ros::Time::now();
@@ -101,7 +95,6 @@ void EstimationNode::odomCb(const nav_msgs::OdometryConstPtr odomPtr)
 
 	// save last timestamp
 	lastOdomStamp = lastOdomReceived.header.stamp;
-
 }
 
 void EstimationNode::velCb(const geometry_msgs::TwistConstPtr velPtr)
@@ -142,14 +135,13 @@ void EstimationNode::comCb(const std_msgs::StringConstPtr str)
 	if(sscanf(str->data.c_str(),"pings %d %d",&a, &b) == 2)
 	{
 		filter->setPing((unsigned int)a, (unsigned int)b);
-		predTime = ros::Duration((0.001*filter->delayControl));	// set predTime to new delayControl
+		predTime = (0.001*filter->delayControl);	// set predTime to new delayControl
 	}
 }
 
 void EstimationNode::Loop()
 {
 	  ros::Rate pub_rate(publishFreq);
-
 	  ros::Time lastInfoSent = ros::Time::now();
 
 	  while (nh_.ok())
@@ -159,18 +151,19 @@ void EstimationNode::Loop()
 
 		  pthread_mutex_lock( &filter->filter_CS );
 		  // -------------- 3. get predicted pose and publish! ---------------
-		  // get filter state msg
+		  // get filter odom msg
 
-		  nav_msgs::Odometry s = filter->getPoseAt(ros::Time().now() + predTime);
+		  nav_msgs::Odometry odom = filter->getPoseAt(ros::Time().now() + ros::Duration(predTime) );
 
 		  pthread_mutex_unlock( &filter->filter_CS );
 
 		  // fill metadata
-		  s.header.stamp = ros::Time().now() + ros::Duration(filter->delayControl/1000);
-		  s.header.frame_id = "world";
-		  s.child_frame_id = "drone";
+		  odom.header.stamp = ros::Time().now() + ros::Duration(filter->delayControl/1000);
+		  odom.header.frame_id = param_ns + string("/map");
+		  odom.child_frame_id = param_ns + string("/base_link");
 		  // publish!
-		  dronepose_pub.publish(s);  
+		  dronepose_pub.publish(odom);  
+		  publishTf(odom);
 		  
 			//	ROS_WARN("Timestamp base: %i",ros_header_timestamp_base);
 		  // --------- if need be: add fake PTAM obs --------
@@ -235,6 +228,25 @@ void EstimationNode::publishCommand(std::string c)
 	pthread_mutex_unlock(&tum_ardrone_CS);
 }
 
+void EstimationNode::publishTf(nav_msgs::Odometry odom)
+{
+  geometry_msgs::TransformStamped transformStamped;
+  
+  transformStamped.header.stamp = odom.header.stamp;
+  transformStamped.header.frame_id = odom.header.frame_id;
+  transformStamped.child_frame_id = odom.child_frame_id;
+  transformStamped.transform.translation.x = odom.pose.pose.position.x;
+  transformStamped.transform.translation.y = odom.pose.pose.position.y;
+  transformStamped.transform.translation.z = odom.pose.pose.position.z;
+
+  transformStamped.transform.rotation.x = odom.pose.pose.orientation.x;
+  transformStamped.transform.rotation.y = odom.pose.pose.orientation.y;
+  transformStamped.transform.rotation.z = odom.pose.pose.orientation.z;
+  transformStamped.transform.rotation.w = odom.pose.pose.orientation.w;
+
+  tf_broadcaster.sendTransform(transformStamped);
+}
+
 void EstimationNode::publishTf(TooN::SE3<> trans, ros::Time stamp, int seq, std::string system)
 {
 	trans = trans.inverse();
@@ -256,9 +268,8 @@ void EstimationNode::publishTf(TooN::SE3<> trans, ros::Time stamp, int seq, std:
 	v[2] = trans.get_translation()[2];
 
 	tf::Transform tr = tf::Transform(m,v);
-	tf::StampedTransform t = tf::StampedTransform(tr,stamp,"map",system);
+	tf::StampedTransform t = tf::StampedTransform(tr,stamp, param_ns + string("/map"), param_ns + system);
 	tf_broadcaster.sendTransform(t);
-
 }
 
 void EstimationNode::reSendInfo()
@@ -307,8 +318,6 @@ void EstimationNode::reSendInfo()
 				kf, kp,kpf[0]+kpf[1]+kpf[2]+kpf[3], kps[0]+kps[1]+kps[2]+kps[3]);
 	else
 		snprintf(bufp,200,"Map: -");
-
-
 
 	std::string status = "";
 /*	switch(	lastNavdataReceived.state)

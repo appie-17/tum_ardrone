@@ -24,16 +24,19 @@
 #include "ros/ros.h"
 #include "ros/package.h"
 #include <dynamic_reconfigure/server.h>
+
 #include "std_msgs/Empty.h"
 #include "std_msgs/String.h"
 #include "geometry_msgs/Twist.h"
 #include "nav_msgs/Odometry.h"
 #include "sensor_msgs/Image.h"
-#include "std_srvs/Empty.h"
+
 #include "tf/tfMessage.h"
-#include "tf/transform_listener.h"
 #include "tf/transform_broadcaster.h"
-#include "std_srvs/Empty.h"
+#include "tf2_ros/transform_broadcaster.h"
+#include <tf2/LinearMath/Matrix3x3.h>
+#include "geometry_msgs/TransformStamped.h"
+
 #include "../HelperFunctions.h"
 #include "DroneKalmanFilter.h"
 #include "PTAMWrapper.h"
@@ -45,7 +48,6 @@
 #include "deque"
 #include <sys/stat.h>
 #include <string>
-
 
 class DroneKalmanFilter;
 class MapView;
@@ -62,8 +64,6 @@ private:
 	ros::Time lastOdomStamp;
 
 	// comm with ptam
-	//ros::Subscriber slam_info_sub; // ptam info (tracking quality) etc.
-	//tf::TransformListener tf_sub;
 	ros::Subscriber drone_sub;
 	ros::Publisher drone_pub;
 	static pthread_mutex_t tum_ardrone_CS;
@@ -80,8 +80,9 @@ private:
 	// every [publishFreq]ms, the node publishes the drones predicted position [predTime]ms into the future.
 	// this pose can then be used to steer the drone. obviously, the larger [predTime], the worse the estimate.
 	// this pose is published on /tf, and simultaneously further info is published on /ardrone/predictedPose
-	ros::Duration predTime;
+	double predTime;
 	int publishFreq;
+	std::string param_ns;
 
 	// for odom time-smoothing
 	long lastDroneTS;
@@ -118,7 +119,8 @@ public:
 	void publishCommand(std::string c);
 	void reSendInfo();
 
-	void publishTf(TooN::SE3<>, ros::Time stamp, int seq, std::string system);
+	void publishTf(nav_msgs::Odometry odom);
+	void publishTf(TooN::SE3<> trans, ros::Time stamp, int seq, std::string system);
 
 };
 #endif /* __ESTIMATIONNODE_H */
