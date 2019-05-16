@@ -172,6 +172,15 @@ void RosThread::joyCb(const sensor_msgs::JoyConstPtr joy_msg)
 		}
 		else if(!joy_msg->buttons.at(14))
 			pressedFourteen=false;			
+		//Send+Clear flight pattern command
+        if((joy_msg->buttons.at(15) & (pressedFifteen!=true)) & !((joy_msg->buttons.at(6) & (pressedSix!=true))))
+        {
+			gui->ClearSendClicked();
+			pressedFifteen=true;
+		}
+		else if(!joy_msg->buttons.at(15))
+			pressedFifteen=false;
+			pressedSix=false;					
 		//Front-flip
         if((joy_msg->buttons.at(13) & (pressedThirteen!=true)) & ((joy_msg->buttons.at(6) & (pressedSix!=true))))
         {
