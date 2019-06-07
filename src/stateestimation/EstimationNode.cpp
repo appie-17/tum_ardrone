@@ -159,7 +159,7 @@ void EstimationNode::Loop()
 
 		  // fill metadata
 		  odom.header.stamp = ros::Time().now() + ros::Duration(filter->delayControl/1000);
-		  odom.header.frame_id = param_ns + string("/map");
+		  odom.header.frame_id = param_ns + string("/local_origin");
 		  odom.child_frame_id = param_ns + string("/base_link");
 		  // publish!
 		  dronepose_pub.publish(odom);  
@@ -238,16 +238,17 @@ void EstimationNode::publishTf(nav_msgs::Odometry odom)
   transformStamped.transform.translation.x = odom.pose.pose.position.x;
   transformStamped.transform.translation.y = odom.pose.pose.position.y;
   transformStamped.transform.translation.z = odom.pose.pose.position.z;
-
-  transformStamped.transform.rotation.x = odom.pose.pose.orientation.x;
-  transformStamped.transform.rotation.y = odom.pose.pose.orientation.y;
-  transformStamped.transform.rotation.z = odom.pose.pose.orientation.z;
+  // Switch x/y-axis, and reverse z-axis from tum_ardrone to rviz 
+  transformStamped.transform.rotation.x = odom.pose.pose.orientation.y;
+  transformStamped.transform.rotation.y = odom.pose.pose.orientation.x;
+  transformStamped.transform.rotation.z = -odom.pose.pose.orientation.z;
   transformStamped.transform.rotation.w = odom.pose.pose.orientation.w;
 
   tf_broadcaster.sendTransform(transformStamped);
 }
 
 void EstimationNode::publishTf(TooN::SE3<> trans, ros::Time stamp, int seq, std::string system)
+
 {
 	trans = trans.inverse();
 
@@ -268,7 +269,7 @@ void EstimationNode::publishTf(TooN::SE3<> trans, ros::Time stamp, int seq, std:
 	v[2] = trans.get_translation()[2];
 
 	tf::Transform tr = tf::Transform(m,v);
-	tf::StampedTransform t = tf::StampedTransform(tr,stamp, param_ns + string("/map"), param_ns + system);
+	tf::StampedTransform t = tf::StampedTransform(tr,stamp, param_ns + string("/local_origin"), param_ns + system);
 	tf_broadcaster.sendTransform(t);
 }
 
