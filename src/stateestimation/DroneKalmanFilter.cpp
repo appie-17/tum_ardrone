@@ -238,9 +238,10 @@ void DroneKalmanFilter::observeIMU_XYZ(const nav_msgs::Odometry* odom)
 		// --------------- now: update  ---------------------------
 		// transform to global CS, using current yaw
 		double yawRad = yaw.state[0] * 3.14159268 / 180;
-		double vx_global = (sin(yawRad) * odom->twist.twist.linear.y + cos(yawRad) * odom->twist.twist.linear.x);
-		double vy_global = (cos(yawRad) * odom->twist.twist.linear.y - sin(yawRad) * odom->twist.twist.linear.x);
-
+//		double vx_global = (sin(yawRad) * odom->twist.twist.linear.y + cos(yawRad) * odom->twist.twist.linear.x);
+//		double vy_global = (cos(yawRad) * odom->twist.twist.linear.y - sin(yawRad) * odom->twist.twist.linear.x);
+        double vx_global = odom->twist.twist.linear.x;
+        double vy_global = odom->twist.twist.linear.y;        
 		if(vx_global > 10)
 			cout << "err";
 
@@ -333,10 +334,12 @@ void DroneKalmanFilter::observeIMU_RPY(const nav_msgs::Odometry* odom)
 {			
 
 	double odom_roll, odom_pitch, odom_yaw;
-	q2rpy(TooN::makeVector(odom->pose.pose.orientation.x,
-						   odom->pose.pose.orientation.y,
-						   odom->pose.pose.orientation.z,
-						   odom->pose.pose.orientation.w), &odom_roll, &odom_pitch, &odom_yaw);
+	q2rpy(TooN::makeVector(
+	                         odom->pose.pose.orientation.x,
+             			     odom->pose.pose.orientation.y,
+			        		 odom->pose.pose.orientation.z,
+			        		 odom->pose.pose.orientation.w), 
+			        		 &odom_roll, &odom_pitch, &odom_yaw);
 
 	if(last_roll_IMU!=odom_roll)
 	{

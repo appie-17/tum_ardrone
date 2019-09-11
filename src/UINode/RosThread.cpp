@@ -93,132 +93,132 @@ void RosThread::joyCb(const sensor_msgs::JoyConstPtr joy_msg)
 		ControlCommand c;
 		c.yaw = joy_msg->axes[0] * -1;
 		c.gaz = joy_msg->axes[1] * 1;
-		c.pitch = joy_msg->axes[4] * 1;
-		c.roll = joy_msg->axes[3] * -1;
+		c.pitch = joy_msg->axes[3] * 1;
+		c.roll = joy_msg->axes[2] * -1;
 
 		sendControlToDrone(c);
 		lastJoyControlSent = c;
 
 		//Button 6 is dead-man button
-		//Turn on autopilot
-		if(joy_msg->buttons.at(0) & (pressedZero!=true))
+		//Turn on autopilot (Cross)
+		if(joy_msg->buttons.at(14) & (pressedZero!=true))
 		{
 			sendAutopilot();
 			pressedZero=true;
 		}
-		else if(!joy_msg->buttons.at(0))
+		else if(!joy_msg->buttons.at(14))
 			pressedZero=false;
-		//Toggle on fpv camera			
-		if(joy_msg->buttons.at(1) & (pressedOne!=true))
+		//Toggle on fpv camera	(Circle)		
+		if(joy_msg->buttons.at(13) & (pressedOne!=true))
 		{
 			sendToggleCam();
 			pressedOne=true;
 		}
-		else if(!joy_msg->buttons.at(1))
+		else if(!joy_msg->buttons.at(13))
 			pressedOne=false;
-		//Calibrate gyroscope on flat surface (flattrim)
-        if(joy_msg->buttons.at(2) & (pressedTwo!=true))
+		//Calibrate gyroscope on flat surface (flattrim, Triangle)
+        if(joy_msg->buttons.at(12) & (pressedTwo!=true))
         {
 			sendFlattrim();
 			pressedTwo=true;
 		}
-		else if(!joy_msg->buttons.at(2))
+		else if(!joy_msg->buttons.at(12))
 			pressedTwo=false;			
-		//Toggle piloting-mode (easy, medium, hard)
-        if(joy_msg->buttons.at(3) & (pressedThree!=true))
+		//Toggle piloting-mode (Square)
+        if(joy_msg->buttons.at(15) & (pressedThree!=true))
         {
 			sendTogglePilotMode();
 			pressedThree=true;
 		}
-		else if(!joy_msg->buttons.at(3))
+		else if(!joy_msg->buttons.at(15))
 			pressedThree=false;
-		//Takeoff
-        if(joy_msg->buttons.at(4) & (pressedFour!=true))
+		//Takeoff (L1)
+        if(joy_msg->buttons.at(10) & (pressedFour!=true))
         {
 			sendTakeoff();	
 			pressedFour=true;
 		}
-		else if(!joy_msg->buttons.at(4))
+		else if(!joy_msg->buttons.at(10))
 			pressedFour=false;
-		//Land
-        if(joy_msg->buttons.at(5) & (pressedFive!=true))
+		//Land (R1)
+        if(joy_msg->buttons.at(11) & (pressedFive!=true))
         {
 			sendLand();
 			pressedFive=true;
 		}
-		else if(!joy_msg->buttons.at(5))
+		else if(!joy_msg->buttons.at(11))
 			pressedFive=false;
-		//Emergency
-        if(joy_msg->buttons.at(7) & (pressedSeven!=true))
+		//Emergency (R2)
+        if(joy_msg->buttons.at(9) & (pressedSeven!=true))
         {
 			sendEmergency();
 			pressedSeven=true;
 		}
-		else if(!joy_msg->buttons.at(7))
+		else if(!joy_msg->buttons.at(9))
 			pressedSeven=false;
-		//Auto-takeoff
-        if((joy_msg->buttons.at(13) & (pressedThirteen!=true)) & !((joy_msg->buttons.at(6) & (pressedSix!=true)))) 
+		//Auto-takeoff (Up)
+        if((joy_msg->buttons.at(4) & (pressedThirteen!=true)) & !((joy_msg->buttons.at(8) & (pressedSix!=true)))) 
 		{
 			sendAutoTakeoff();
 			pressedThirteen=true;
 		}
-		else if(!joy_msg->buttons.at(13))
+		else if(!joy_msg->buttons.at(4))
 			pressedThirteen=false;        
-        //Snapshot downwards
-        if((joy_msg->buttons.at(14) & (pressedFourteen!=true)) & !((joy_msg->buttons.at(6) & (pressedSix!=true)))) 
+        //Snapshot downwards (Down)
+        if((joy_msg->buttons.at(6) & (pressedFourteen!=true)) & !((joy_msg->buttons.at(8) & (pressedSix!=true)))) 
         {
 			sendSnapshot();
 			pressedFourteen=true;
 		}
-		else if(!joy_msg->buttons.at(14))
+		else if(!joy_msg->buttons.at(6))
 			pressedFourteen=false;			
-		//Send+Clear flight pattern command
-        if((joy_msg->buttons.at(15) & (pressedFifteen!=true)) & !((joy_msg->buttons.at(6) & (pressedSix!=true))))
+		//Send+Clear flight pattern command (Left)
+        if((joy_msg->buttons.at(7) & (pressedFifteen!=true)) & !((joy_msg->buttons.at(8) & (pressedSix!=true))))
         {
 			gui->ClearSendClicked();
 			pressedFifteen=true;
 		}
-		else if(!joy_msg->buttons.at(15))
+		else if(!joy_msg->buttons.at(7))
 			pressedFifteen=false;
 			pressedSix=false;					
-		//Front-flip
-        if((joy_msg->buttons.at(13) & (pressedThirteen!=true)) & ((joy_msg->buttons.at(6) & (pressedSix!=true))))
+		//Front-flip (L2 + Up)
+        if((joy_msg->buttons.at(4) & (pressedThirteen!=true)) & ((joy_msg->buttons.at(8) & (pressedSix!=true))))
         {
-			sendFlip(1);
+			sendFlip(0);
 			pressedThirteen=true;
 			pressedSix=true;
 		}
-		else if(!joy_msg->buttons.at(13))
+		else if(!joy_msg->buttons.at(4))
 			pressedThirteen=false;
 			pressedSix=false;
-		//..-flip
-        if((joy_msg->buttons.at(14) & (pressedFourteen!=true)) & ((joy_msg->buttons.at(6) & (pressedSix!=true))))
+		//Back-flip (L2 + Down)
+        if((joy_msg->buttons.at(6) & (pressedFourteen!=true)) & ((joy_msg->buttons.at(8) & (pressedSix!=true))))
         {
-			sendFlip(2);
+			sendFlip(1);
 			pressedFourteen=true;
 			pressedSix=true;
 		}
-		else if(!joy_msg->buttons.at(14))
+		else if(!joy_msg->buttons.at(6))
 			pressedFourteen=false;
 			pressedSix=false;			
-		//..-flip
-        if((joy_msg->buttons.at(15) & (pressedFifteen!=true)) & ((joy_msg->buttons.at(6) & (pressedSix!=true))))
+		//Left-flip (L2 + Left)
+        if((joy_msg->buttons.at(7) & (pressedFifteen!=true)) & ((joy_msg->buttons.at(8) & (pressedSix!=true))))
         {
-			sendFlip(4);
+			sendFlip(2);
 			pressedFifteen=true;
 			pressedSix=true;
 		}
-		else if(!joy_msg->buttons.at(15))
+		else if(!joy_msg->buttons.at(7))
 			pressedFifteen=false;
 			pressedSix=false;			
-		//..-flip
-        if((joy_msg->buttons.at(16) & (pressedSixteen!=true)) & ((joy_msg->buttons.at(6) & (pressedSix!=true))))
+		//Right-flip (L2 + right)
+        if((joy_msg->buttons.at(5) & (pressedSixteen!=true)) & ((joy_msg->buttons.at(8) & (pressedSix!=true))))
         {
 			sendFlip(3);		
 			pressedSixteen=true;
 			pressedSix=true;
 		}
-		else if(!joy_msg->buttons.at(16))
+		else if(!joy_msg->buttons.at(5))
 			pressedSixteen=false;
 			pressedSix=false;	
 	}

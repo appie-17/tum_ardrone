@@ -103,7 +103,7 @@ inline static void q2rpy(TooN::Vector<4> q, double* X, double* Y, double* Z)
 	double z = q[2];
 	double w = q[3];
 	
-	t0 = 2.0 * (w*x - y*z);
+	t0 = 2.0 * (w*x + y*z);
 	t1 = 1.0 - 2.0*(x*x + y*y);
 	*X = atan2(t0,t1);
 	
@@ -113,7 +113,7 @@ inline static void q2rpy(TooN::Vector<4> q, double* X, double* Y, double* Z)
 	*Y = asin(t2);
 	
 	t3 = 2.0 * (w*z +x*y);
-	t4 = 1.0 - 2.0*(y*y + z*z);
+	t4 = 1.0 - 2.0 * (y*y + z*z);
 	*Z = atan2(t3, t4);
 	
 	

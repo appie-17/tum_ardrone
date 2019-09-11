@@ -31,7 +31,7 @@ PingThread::PingThread()
 	line1[0] = '\0';
 	line2[0] = '\0';
 	keepRunning = true;
-	measure = true;
+	measure = false;
 
 	p500 = 25;
 	p20000 = 50;

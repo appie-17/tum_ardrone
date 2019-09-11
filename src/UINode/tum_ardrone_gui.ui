@@ -472,7 +472,7 @@
      <string>Ping Drone (every 1s)</string>
     </property>
     <property name="checked">
-     <bool>true</bool>
+     <bool>false</bool>
     </property>
    </widget>
   </widget>
