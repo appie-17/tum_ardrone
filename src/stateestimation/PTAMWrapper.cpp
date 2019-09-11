@@ -928,3 +928,4 @@ void PTAMWrapper::on_mouse_down(CVD::ImageRef where, int state, int button)
 
 	node->publishCommand(bf);
 }
+

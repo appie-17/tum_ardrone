@@ -8,15 +8,19 @@ lockScaleFP
 
 goto 0 0 0 0
 
-goto 0.5 -0.5 1 0
-goto -0.5 -0.5 1 0
-goto -0.5 0.5 1 0
-goto 0.5 0.5 1 0
+goto 0.5 0 0 0
+goto -1.0 0 0 0
+goto 0 0 0 0
+goto 0 -0.5 0 0
+goto 0 1.0 0 0
 
-goto 0.5 0.5 0 0
-goto -0.5 0.5 0 0
-goto -0.5 -0.5 0 0
-goto 0.5 -0.5 0 0
+goto 0 0 0 0
+
+goto 0.5 0 0 0
+goto -1.0 0 0 0
+goto 0 0 0 0
+goto 0 -0.5 0 0
+goto 0 1.0 0 0
 
 goto 0 0 0 0
 
