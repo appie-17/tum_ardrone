@@ -1,3 +1,6 @@
+# TODO:
+Autopilot publish setpoints in ROS 'geometry_msgs/PoseStamped' format
+
 # Package tum_ardrone
 
 This package contains the implementation corresponding to the following publications:

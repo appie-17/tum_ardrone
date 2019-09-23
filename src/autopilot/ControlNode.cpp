@@ -19,15 +19,6 @@
  */
 
 #include "ControlNode.h"
-#include "ros/ros.h"
-#include "ros/package.h"
-#include "ros/callback_queue.h"
-
-#include "geometry_msgs/Twist.h"
-#include "../HelperFunctions.h"
-#include "std_msgs/String.h"
-#include <sys/stat.h>
-#include <string>
 
 // include KI's
 #include "KI/KIAutoInit.h"
@@ -42,14 +33,15 @@ pthread_mutex_t ControlNode::logControl_CS = PTHREAD_MUTEX_INITIALIZER;
 
 ControlNode::ControlNode()
 {
-    control_channel = nh_.resolveName("cmd_vel");
+  control_channel = nh_.resolveName("cmd_vel");
+  setpoint_channel = nh_.resolveName("setpoint");
  	dronestate_channel = nh_.resolveName("droneState");
-    dronepose_channel = nh_.resolveName("predictedPose");
-    ptamstate_channel = nh_.resolveName("ptamState");
-    command_channel = nh_.resolveName("com");
-    takeoff_channel = nh_.resolveName("takeoff");
-    land_channel = nh_.resolveName("land");
-    toggleState_channel = nh_.resolveName("reset");
+  dronepose_channel = nh_.resolveName("predictedPose");
+  ptamstate_channel = nh_.resolveName("ptamState");
+  command_channel = nh_.resolveName("com");
+  takeoff_channel = nh_.resolveName("takeoff");
+  land_channel = nh_.resolveName("land");
+  toggleState_channel = nh_.resolveName("reset");
 
 	packagePath = ros::package::getPath("tum_ardrone");
 
@@ -73,7 +65,8 @@ ControlNode::ControlNode()
 
 	dronepose_sub = nh_.subscribe(dronepose_channel, 100, &ControlNode::droneposeCb, this);
 	ptamstate_sub = nh_.subscribe(ptamstate_channel, 10, &ControlNode::ptamstateCb, this);
-	vel_pub	   = nh_.advertise<geometry_msgs::Twist>(control_channel,1);
+	setpoint_pub = nh_.advertise<geometry_msgs::PoseStamped>(setpoint_channel, 1);
+	vel_pub	   = nh_.advertise<geometry_msgs::Twist>(control_channel, 1);
 
 	drone_pub	   = nh_.advertise<std_msgs::String>(command_channel,50);
 	drone_sub	   = nh_.subscribe(command_channel,50, &ControlNode::comCb, this);
@@ -273,7 +266,9 @@ void ControlNode::popNextCommand(const nav_msgs::OdometryConstPtr statePtr)
 				parameter_InitialReachDist,
 				parameter_StayWithinDist
 				);
+			
 			currentKI->setPointers(this,&controller);
+      publishSetpoint(currentKI->poseMsg);
 			commandUnderstood = true;
 
 		}
@@ -420,6 +415,13 @@ void ControlNode::dynConfCb(tum_ardrone::AutopilotParamsConfig &config, uint32_t
 }
 
 pthread_mutex_t ControlNode::tum_ardrone_CS = PTHREAD_MUTEX_INITIALIZER;
+
+void ControlNode::publishSetpoint(geometry_msgs::PoseStamped setpoint)
+{
+
+  setpoint_pub.publish(setpoint);
+
+}
 
 void ControlNode::publishCommand(std::string c)
 {
