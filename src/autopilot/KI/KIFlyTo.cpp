@@ -42,7 +42,12 @@ KIFlyTo::KIFlyTo(DronePosition checkpointP,
 	
 	targetSet = false;
 
-	isCompleted = false;
+	isCompleted = false;	
+	
+	poseMsg.header.stamp = ros::Time().now();
+	poseMsg.pose.position.x = checkpointP.pos[0];
+	poseMsg.pose.position.y = checkpointP.pos[1];
+  poseMsg.pose.position.z = checkpointP.pos[2];
 
 	char buf[200];
 	snprintf(buf,200,"goto %.2f %.2f %.2f %.2f", checkpointP.pos[0], checkpointP.pos[1], checkpointP.pos[2], checkpointP.yaw);
@@ -53,7 +58,6 @@ KIFlyTo::KIFlyTo(DronePosition checkpointP,
 KIFlyTo::~KIFlyTo(void)
 {
 }
-
 
 bool KIFlyTo::update(const nav_msgs::OdometryConstPtr statePtr)
 {

@@ -22,7 +22,10 @@
 #define __CONTROLNODE_H
 
 #include "ros/ros.h"
+#include "ros/package.h"
+#include "ros/callback_queue.h"
 #include "geometry_msgs/Twist.h"
+#include "geometry_msgs/PoseStamped.h"
 #include "tum_ardrone/drone_state.h"
 #include "tum_ardrone/ptam_state.h"
 #include "std_msgs/String.h"
@@ -37,7 +40,6 @@
 #include "tum_ardrone/SetInitialReachDistance.h"
 #include "tum_ardrone/SetStayWithinDistance.h"
 #include "tum_ardrone/SetStayTime.h"
-#include "std_srvs/Empty.h"
 
 class DroneKalmanFilter;
 class MapView;
@@ -51,6 +53,7 @@ private:
 	ros::Subscriber dronestate_sub;
 	ros::Subscriber dronepose_sub;
 	ros::Subscriber ptamstate_sub;
+	ros::Publisher setpoint_pub;
 	ros::Publisher vel_pub;
 	ros::Subscriber drone_sub;
 	ros::Publisher drone_pub;
@@ -64,6 +67,7 @@ private:
 	// parameters
 	int minPublishFreq;
 	std::string control_channel;
+	std::string setpoint_channel;
 	std::string dronestate_channel;	
 	std::string dronepose_channel;
 	std::string ptamstate_channel;
@@ -134,6 +138,8 @@ public:
 
 	// main pose-estimation loop
 	void Loop();
+
+  void publishSetpoint(geometry_msgs::PoseStamped setpoint);
 
 	// writes a string message to "/tum_ardrone/com".
 	// is thread-safe (can be called by any thread, but may block till other calling thread finishes)

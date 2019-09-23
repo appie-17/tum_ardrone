@@ -37,17 +37,17 @@ private:
 	double initialReachedDist;
 	double stayWithinDist;
 
-
 	DronePosition checkpoint;
-
+	
 public:
 	KIFlyTo(DronePosition checkpoint, 
 		double stayTime = 2,
 		double maxControlFactorP = 1,
 		double initialReachedDistP = 0.2,
-		double stayWithinDistP = 0.5);
+		double stayWithinDistP = 0.5);  
 
 	~KIFlyTo(void);
+	
 	bool update(const nav_msgs::OdometryConstPtr statePtr);
 };
 

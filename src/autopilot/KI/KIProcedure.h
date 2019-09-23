@@ -21,10 +21,9 @@
 #ifndef __KIPROCEDURE_H
 #define __KIPROCEDURE_H
  
- 
-
 #include "../DroneController.h"
 #include "tum_ardrone/ptam_state.h"
+#include "geometry_msgs/PoseStamped.h"
 
 class ControlNode;
 class DroneController;
@@ -38,6 +37,7 @@ protected:
 
 public:
 	std::string command;
+  geometry_msgs::PoseStamped poseMsg;
 
 	// called externally before first call to update().
 	inline void setPointers(ControlNode* node, DroneController* cont)
