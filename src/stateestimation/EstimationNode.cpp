@@ -269,7 +269,7 @@ void EstimationNode::publishTf(TooN::SE3<> trans, ros::Time stamp, int seq, std:
 	v[2] = trans.get_translation()[2];
 
 	tf::Transform tr = tf::Transform(m,v);
-	tf::StampedTransform t = tf::StampedTransform(tr,stamp, param_ns + string("/local_origin"), param_ns + system);
+	tf::StampedTransform t = tf::StampedTransform(tr,stamp, param_ns + string("/base_link"), param_ns + system);
 	tf_broadcaster.sendTransform(t);
 }
 
