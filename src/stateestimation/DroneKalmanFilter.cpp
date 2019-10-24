@@ -282,18 +282,18 @@ void DroneKalmanFilter::observeIMU_XYZ(const nav_msgs::Odometry* odom)
 	{
 		if(baselineZ_Filter < -100000)	// only for initialization.
 		{
-			baselineZ_IMU = odom->pose.pose.position.z/1000;
+			baselineZ_IMU = odom->pose.pose.position.z;
 			baselineZ_Filter = z.state[0];
 		}
 
 		if(lastPosesValid)
 		{
 
-			double imuHeightDiff = (odom->pose.pose.position.z/1000 - baselineZ_IMU );	// TODO negative heights??
+			double imuHeightDiff = (odom->pose.pose.position.z - baselineZ_IMU );	// TODO negative heights??
 			double observedHeight = baselineZ_Filter + 0.5*(imuHeightDiff + last_z_heightDiff);
 			last_z_heightDiff = imuHeightDiff;
 
-			baselineZ_IMU = odom->pose.pose.position.z/1000;
+			baselineZ_IMU = odom->pose.pose.position.z;
 			baselineZ_Filter = z.state[0];
 
 			if((abs(imuHeightDiff) < 0.350 && abs(last_z_heightDiff) < 0.350))	// jumps of more than 150mm in 40ms are ignored
@@ -304,7 +304,7 @@ void DroneKalmanFilter::observeIMU_XYZ(const nav_msgs::Odometry* odom)
 		}
 		else
 		{
-			double imuHeightDiff = (odom->pose.pose.position.z/1000 - baselineZ_IMU );
+			double imuHeightDiff = (odom->pose.pose.position.z - baselineZ_IMU );
 			double observedHeight = baselineZ_Filter + imuHeightDiff;
 
 			if(abs(imuHeightDiff) < 0.350)	// jumps of more than 150mm in 40ms are ignored
@@ -320,12 +320,12 @@ void DroneKalmanFilter::observeIMU_XYZ(const nav_msgs::Odometry* odom)
 					z.observeSpeed(0,0);
 				}
 
-				baselineZ_IMU = odom->pose.pose.position.z/1000;
+				baselineZ_IMU = odom->pose.pose.position.z;
 				baselineZ_Filter = z.state[0];
 			}
 		}
 
-		last_z_IMU = odom->pose.pose.position.z/1000;
+		last_z_IMU = odom->pose.pose.position.z;
 		last_z_packageID = odom->header.seq;
 	}
 }
@@ -771,9 +771,11 @@ nav_msgs::Odometry DroneKalmanFilter::getCurrentPoseSpeed()
 	s.pose.pose.position.y = y.state[0];
 	s.pose.pose.position.z = z.state[0];
 	
-	tf::Quaternion q(pitch.state*3.14159268/180, roll.state*3.14159268/180, yaw.state[0]*3.14159268/180);
-	quaternionTFToMsg(q, s.pose.pose.orientation);
-	
+//	tf::Quaternion q(pitch.state*3.14159268/180, roll.state*3.14159268/180, yaw.state[0]*3.14159268/180);
+  tf::Quaternion q(pitch.state*3.14159268/180, roll.state*3.14159268/180, 0);
+  tf::Quaternion q_rot (0, 0, yaw.state[0]*3.14159268/180);
+	quaternionTFToMsg(q_rot*q, s.pose.pose.orientation);
+
 	s.twist.twist.linear.x = x.state[1];
 	s.twist.twist.linear.y = y.state[1];
 	s.twist.twist.linear.z = z.state[1];

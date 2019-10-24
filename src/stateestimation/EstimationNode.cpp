@@ -238,13 +238,13 @@ void EstimationNode::publishTf(nav_msgs::Odometry odom)
   transformStamped.header.stamp = odom.header.stamp;
   transformStamped.header.frame_id = odom.header.frame_id;
   transformStamped.child_frame_id = odom.child_frame_id;
-  transformStamped.transform.translation.x = odom.pose.pose.position.x;
-  transformStamped.transform.translation.y = odom.pose.pose.position.y;
-  transformStamped.transform.translation.z = odom.pose.pose.position.z;
-  // Switch x/y-axis, and reverse z-axis from tum_ardrone to rviz 
-  transformStamped.transform.rotation.x = odom.pose.pose.orientation.y;
-  transformStamped.transform.rotation.y = odom.pose.pose.orientation.x;
-  transformStamped.transform.rotation.z = -odom.pose.pose.orientation.z;
+  // Switch x- and y axis, reverse z-axis to North-East-Down (NED)
+  transformStamped.transform.translation.x = odom.pose.pose.position.y;  
+  transformStamped.transform.translation.y = odom.pose.pose.position.x;
+  transformStamped.transform.translation.z = -odom.pose.pose.position.z;
+  transformStamped.transform.rotation.x = odom.pose.pose.orientation.x;
+  transformStamped.transform.rotation.y = odom.pose.pose.orientation.y;
+  transformStamped.transform.rotation.z = odom.pose.pose.orientation.z;
   transformStamped.transform.rotation.w = odom.pose.pose.orientation.w;
 
   tf_broadcaster.sendTransform(transformStamped);
@@ -272,7 +272,7 @@ void EstimationNode::publishTf(TooN::SE3<> trans, ros::Time stamp, int seq, std:
 	v[2] = trans.get_translation()[2];
 
 	tf::Transform tr = tf::Transform(m,v);
-	tf::StampedTransform t = tf::StampedTransform(tr,stamp, param_ns + string("/local_origin"), param_ns + system);
+	tf::StampedTransform t = tf::StampedTransform(tr,stamp, param_ns + string("/base_link"), param_ns + system);
 	tf_broadcaster.sendTransform(t);
 }
 
