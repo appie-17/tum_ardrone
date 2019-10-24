@@ -63,6 +63,9 @@ EstimationNode::~EstimationNode()
 void EstimationNode::odomCb(const nav_msgs::OdometryConstPtr odomPtr)
 {
 	lastOdomReceived = *odomPtr;
+	    // tum_ardrone expects height in mm instead of meters
+    lastOdomReceived.pose.pose.position.z *= 1000;
+    
 	if(ros::Time::now() - lastOdomReceived.header.stamp > ros::Duration(30.0))
 		lastOdomReceived.header.stamp = ros::Time::now();
 /*

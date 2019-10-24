@@ -1,8 +1,8 @@
 autoTakeover 500 800
 setReference $POSE$
 setMaxControl 1.0
-setInitialReachDist 0.01
-setStayWithinDist 0.02
+setInitialReachDist 0.3
+setStayWithinDist 0.3
 setStayTime 1
 lockScaleFP
 
