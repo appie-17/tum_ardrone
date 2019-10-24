@@ -314,8 +314,8 @@ void RosThread::run()
 	autoTakeoff_pub = nh_.advertise<std_msgs::Empty>(nh_.resolveName("auto_takeoff"),1);
 	snapshot_sub = nh_.subscribe(nh_.resolveName("snapshot"), 1, &RosThread::snapshotCb, this);
 	snapshot_pub = nh_.advertise<std_msgs::Empty>(nh_.resolveName("snapshot"),1);
-	togglePilotMode_sub = nh_.subscribe(nh_.resolveName("pilot_mode"), 1, &RosThread::togglepilotmodeCb, this);
-	togglePilotMode_pub = nh_.advertise<std_msgs::Empty>(nh_.resolveName("pilot_mode"), 1);
+	togglePilotMode_sub = nh_.subscribe(nh_.resolveName("fast_mode"), 1, &RosThread::togglepilotmodeCb, this);
+	togglePilotMode_pub = nh_.advertise<std_msgs::Empty>(nh_.resolveName("fast_mode"), 1);
 	toggleCam_sub = nh_.subscribe(nh_.resolveName("toggle_cam"),1, &RosThread::togglecamCb, this);
     toggleCam_pub = nh_.advertise<std_msgs::Empty>(nh_.resolveName("toggle_cam"),1);
 	flattrim_sub = nh_.subscribe(nh_.resolveName("flattrim"),1, &RosThread::flattrimCb, this);
