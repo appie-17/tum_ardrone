@@ -282,18 +282,18 @@ void DroneKalmanFilter::observeIMU_XYZ(const nav_msgs::Odometry* odom)
 	{
 		if(baselineZ_Filter < -100000)	// only for initialization.
 		{
-			baselineZ_IMU = odom->pose.pose.position.z;
+			baselineZ_IMU = odom->pose.pose.position.z/1000;
 			baselineZ_Filter = z.state[0];
 		}
 
 		if(lastPosesValid)
 		{
 
-			double imuHeightDiff = (odom->pose.pose.position.z - baselineZ_IMU );	// TODO negative heights??
+			double imuHeightDiff = (odom->pose.pose.position.z/1000 - baselineZ_IMU );	// TODO negative heights??
 			double observedHeight = baselineZ_Filter + 0.5*(imuHeightDiff + last_z_heightDiff);
 			last_z_heightDiff = imuHeightDiff;
 
-			baselineZ_IMU = odom->pose.pose.position.z;
+			baselineZ_IMU = odom->pose.pose.position.z/1000;
 			baselineZ_Filter = z.state[0];
 
 			if((abs(imuHeightDiff) < 0.350 && abs(last_z_heightDiff) < 0.350))	// jumps of more than 150mm in 40ms are ignored
@@ -304,7 +304,7 @@ void DroneKalmanFilter::observeIMU_XYZ(const nav_msgs::Odometry* odom)
 		}
 		else
 		{
-			double imuHeightDiff = (odom->pose.pose.position.z - baselineZ_IMU );
+			double imuHeightDiff = (odom->pose.pose.position.z/1000 - baselineZ_IMU );
 			double observedHeight = baselineZ_Filter + imuHeightDiff;
 
 			if(abs(imuHeightDiff) < 0.350)	// jumps of more than 150mm in 40ms are ignored
@@ -320,12 +320,12 @@ void DroneKalmanFilter::observeIMU_XYZ(const nav_msgs::Odometry* odom)
 					z.observeSpeed(0,0);
 				}
 
-				baselineZ_IMU = odom->pose.pose.position.z;
+				baselineZ_IMU = odom->pose.pose.position.z/1000;
 				baselineZ_Filter = z.state[0];
 			}
 		}
 
-		last_z_IMU = odom->pose.pose.position.z;
+		last_z_IMU = odom->pose.pose.position.z/1000;
 		last_z_packageID = odom->header.seq;
 	}
 }
